@@ -96,7 +96,7 @@ body{
 /* ===== 基本設定 ===== */
 const HAND_SIZE = 8;
 const MAX_SELECT = 5;
-const CARD_IMAGE_PATH = 'cards/'; // 你自己的路徑
+const CARD_IMAGE_PATH = 'https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/'; // 撲克牌路徑
 
 const toast = document.getElementById('toast');
 const handArea = document.getElementById('hand-area');
@@ -107,21 +107,31 @@ const handArea = document.getElementById('hand-area');
   rank：牌面
   img：對應圖片檔名
 */
-let deck = [
-  { rank:'2', img:'2.png' },
-  { rank:'3', img:'3.png' },
-  { rank:'4', img:'4.png' },
-  { rank:'5', img:'5.png' },
-  { rank:'6', img:'6.png' },
-  { rank:'7', img:'7.png' },
-  { rank:'8', img:'8.png' },
-  { rank:'9', img:'9.png' },
-  { rank:'10', img:'10.png' },
-  { rank:'J', img:'J.png' },
-  { rank:'Q', img:'Q.png' },
-  { rank:'K', img:'K.png' },
-  { rank:'A', img:'A.png' }
-];
+const SUITS = ['S','H','D','C'];
+const RANKS = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+let deck = [];
+
+/* 建立 52 張牌 */
+SUITS.forEach(suit=>{
+  RANKS.forEach(rank=>{
+    deck.push({
+      suit: suit,
+      rank: rank,
+      img: `${suit}${rank}.png`
+    });
+  });
+});
+
+/* 如果之後要用鬼牌 */
+function addJokers(n=1){
+  for(let i=0;i<n;i++){
+    deck.push({
+      suit: 'JOKER',
+      rank: 'JOKER',
+      img: 'joker.png'
+    });
+  }
+}
 
 /* ===== 工具 ===== */
 function shuffle(array){
@@ -155,6 +165,7 @@ function drawHand(){
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.rank = cardData.rank;
+    card.dataset.suit = cardData.suit;
 
     const img = document.createElement('img');
     img.src = CARD_IMAGE_PATH + cardData.img;
