@@ -23,7 +23,7 @@ body{
 /* ===== 提示 ===== */
 #toast{
   position:absolute;
-  top:40%;
+  bottom:30vh;              /* 手牌高度 32vh + 一點間距 */
   left:50%;
   transform:translateX(-50%);
   background:rgba(0,0,0,0.75);
@@ -36,7 +36,7 @@ body{
 }
 #toast.show{ opacity:1; }
 
-/* ===== 手牌區 ===== */
+/* ===== 手牌區（左手牌 + 右側按鈕） ===== */
 #hand-area{
   position:absolute;
   bottom:0;
@@ -45,15 +45,64 @@ body{
   display:flex;
   justify-content:center;
   align-items:flex-end;
-  padding-bottom:2vh;
+  padding:0 3vw 2vh;   /* 右側留出空間給按鈕 */
+  box-sizing:border-box;
+}
+/* 左邊：手牌容器 */
+#hand-cards{
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  flex:1;              /* 吃掉剩餘寬度 */
+  min-width:0;
+}
+/* 右邊：按鈕欄 */
+#hand-actions{
+  width:92px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  align-items:stretch;
+  margin-left:12px;
+  padding-bottom:0px;
+}
+/* 按鈕樣式 */
+.action-btn{
+  padding:0.9em 0.2em;
+  font-size:1.1em;
+  border-radius:14px;
+  border:none;
+  cursor:pointer;
+  background:#1e90ff;
+  color:white;
+  transition:background 0.25s ease, transform 0.08s ease;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.action-btn:disabled{
+  opacity: 0.45;
+  filter: grayscale(0.2);
+  cursor: not-allowed;
+  transform: none;
+}
+.action-btn:hover{ background:#63b3ed; }
+.action-btn:active{ transform:scale(0.98); }
+
+/* 棄牌可用不同色（可選） */
+.action-btn.discard{
+  background:#ff5b5b;
+}
+.action-btn.discard:hover{
+  background:#ff8a8a;
 }
 
 /* ===== 卡牌 ===== */
 .card{
   position:relative;
-  width:70px;
-  height:100px;
-  margin-left:-30px;
+  width:87.5px;
+  height:122.5px;
+  margin-left:-43.5px;
+
   transition:transform 0.2s ease;
 }
 .card:first-child{ margin-left:0; }
@@ -78,6 +127,9 @@ body{
 .card:nth-child(6){z-index:6}
 .card:nth-child(7){z-index:7}
 .card:nth-child(8){z-index:8}
+.card:nth-child(9){z-index:9}
+.card:nth-child(10){z-index:10}
+.card:nth-child(11){z-index:11}
 
 </style>
 </head>
@@ -86,20 +138,72 @@ body{
 
 <div id="game-screen">
 
-  <div id="toast">已達出牌上限</div>
+  <div id="toast"></div>
 
-  <div id="hand-area"></div>
+  <div id="hand-area">
+    <div id="hand-cards"></div>
+
+    <div id="hand-actions">
+      <button id="btn-play" class="action-btn">補給</button>
+      <button id="btn-discard" class="action-btn discard">丟棄</button>
+    </div>
+  </div>
 
 </div>
 
 <script>
 /* ===== 基本設定 ===== */
-const HAND_SIZE = 8;
+let HAND_SIZE = 8;
 const MAX_SELECT = 5;
 const CARD_IMAGE_PATH = 'https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/'; // 撲克牌路徑
 
 const toast = document.getElementById('toast');
-const handArea = document.getElementById('hand-area');
+
+const handCards = document.getElementById('hand-cards');
+const btnPlay = document.getElementById('btn-play');
+const btnDiscard = document.getElementById('btn-discard');
+
+btnPlay.addEventListener('click', ()=>{
+  const ids = getSelectedCardIds();
+  if(ids.length === 0) return;
+
+  // 1) 從手牌移除選中的牌
+  const outCards = removeCardsFromHandByIds(ids);
+
+  // 2) 放進已出牌堆（不回牌庫）
+  played.push(...outCards);
+
+  // 3) 補牌：出幾張補幾張（從 drawPile 抽）
+  drawFromPile(outCards.length);
+
+  // 4) 重新 render（選取狀態自然清空）
+  renderHand();
+
+  showToastText(`出牌：${outCards.length} 張`);
+});
+
+btnDiscard.addEventListener('click', ()=>{
+  const ids = getSelectedCardIds();
+  if(ids.length === 0) return;
+
+  // 1) 先把棄牌從手牌移除（暫存起來）
+  const discardCards = removeCardsFromHandByIds(ids);
+
+  // 2) 先抽牌補回手牌（此時棄牌還沒回牌庫，所以不會立刻抽到同張）
+  drawFromPile(discardCards.length);
+
+  // 3) 再把棄牌放回牌庫（抽牌堆）
+  //   這裡我建議放回後洗一下，避免都堆在牌堆頂端/底端
+  drawPile.push(...discardCards);
+  shuffle(drawPile);
+
+  // 4) 重新 render
+  renderHand();
+
+  showToastText(`棄牌：${discardCards.length} 張`);
+});
+
+
 
 /* ===== 牌庫定義 ===== */
 /*
@@ -111,6 +215,11 @@ const SUITS = ['S','H','D','C'];
 const RANKS = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
 let deck = [];
 
+// ===== 遊戲狀態 =====
+let drawPile = [];   // 目前可抽的牌庫（會變動）
+let hand = [];       // 玩家手牌（會變動）
+let played = [];     // 已出的牌（不回牌庫）
+
 /* 建立 52 張牌 */
 SUITS.forEach(suit=>{
   RANKS.forEach(rank=>{
@@ -121,6 +230,25 @@ SUITS.forEach(suit=>{
     });
   });
 });
+
+// 點數排序：2 ~ A
+const RANK_ORDER = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+// 花色排序：黑桃 S → 紅心 H → 方塊 D → 梅花 C
+const SUIT_ORDER = ['S','H','D','C'];
+
+function sortHand(hand){
+  hand.sort((a,b)=>{
+    const ra = RANK_ORDER.indexOf(a.rank);
+    const rb = RANK_ORDER.indexOf(b.rank);
+    if(ra !== rb) return ra - rb;
+
+    const sa = SUIT_ORDER.indexOf(a.suit);
+    const sb = SUIT_ORDER.indexOf(b.suit);
+    return sa - sb;
+  });
+  return hand;
+}
+
 
 /* 如果之後要用鬼牌 */
 function addJokers(n=1){
@@ -144,28 +272,79 @@ function shuffle(array){
 function selectedCount(){
   return document.querySelectorAll('.card.selected').length;
 }
+function getSelectedCardIds(){
+  return [...document.querySelectorAll('.card.selected')].map(el => el.dataset.id);
+}
+
+function removeCardsFromHandByIds(ids){
+  // 回傳被移除的牌（依 ids 順序）
+  const removed = [];
+  ids.forEach(id=>{
+    const idx = hand.findIndex(c => (c.suit + c.rank) === id);
+    if(idx !== -1){
+      removed.push(hand.splice(idx,1)[0]);
+    }
+  });
+  return removed;
+}
+
 
 let toastTimer = null;
-function showToast(){
+function showToastText(text){
+  toast.textContent = text;
   toast.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>{
     toast.classList.remove('show');
-  },2000);
+  },800);
 }
 
+function updateActionButtons(){
+  const hasSelected = selectedCount() > 0;
+  btnPlay.disabled = !hasSelected;
+  btnDiscard.disabled = !hasSelected;
+}
+
+
 /* ===== 抽牌 ===== */
-function drawHand(){
-  handArea.innerHTML = '';
-  shuffle(deck);
+function initGame(){
+  // 從牌的定義 deck 建立抽牌堆（每局開始一次）
+  drawPile = [...deck];
+  shuffle(drawPile);
 
-  const hand = deck.slice(0, HAND_SIZE);
+  hand = [];
+  played = [];
 
-  hand.forEach(cardData=>{
+  // 發初始手牌
+  drawFromPile(HAND_SIZE);
+  renderHand();
+  updateActionButtons();
+}
+
+// 從抽牌堆抽 n 張到手牌（抽到的牌會離開 drawPile）
+function drawFromPile(n){
+  for(let i=0;i<n;i++){
+    if(drawPile.length <= 0){
+      showToastText('牌庫已空');
+      break;
+    }
+    hand.push(drawPile.pop()); // pop 代表從牌堆頂抽
+  }
+}
+
+// 依你定義的排序規則把手牌排好，然後 render 到畫面
+function renderHand(){
+  handCards.innerHTML = '';
+
+  const sorted = [...hand];
+  sortHand(sorted);
+
+  sorted.forEach(cardData=>{
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.rank = cardData.rank;
     card.dataset.suit = cardData.suit;
+    card.dataset.id = cardData.suit + cardData.rank; // 唯一識別（52 張唯一）
 
     const img = document.createElement('img');
     img.src = CARD_IMAGE_PATH + cardData.img;
@@ -175,23 +354,30 @@ function drawHand(){
     card.addEventListener('click',()=>{
       if(card.classList.contains('selected')){
         card.classList.remove('selected');
+        updateActionButtons();
         return;
       }
 
       if(selectedCount() >= MAX_SELECT){
-        showToast();
+        showToastText('已達出/棄牌上限');
         return;
       }
 
       card.classList.add('selected');
+      updateActionButtons();
     });
 
-    handArea.appendChild(card);
+    handCards.appendChild(card);
   });
+
+  // render 完後若沒有選牌，按鈕應該 disabled
+  updateActionButtons();
 }
 
+
 /* ===== 初始化 ===== */
-drawHand();
+updateActionButtons();
+initGame();
 </script>
 
 </body>
