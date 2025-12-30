@@ -341,6 +341,42 @@ body{
   .grid{ grid-template-columns:1fr; }
 }
 
+/* ===== 確認視窗 ===== */
+#confirm-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.45);
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#confirm-box{
+  width:min(86vw, 520px);
+  background:rgba(10,10,14,0.96);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:16px;
+  padding:16px 14px;
+  box-shadow:0 18px 60px rgba(0,0,0,0.65);
+}
+
+#confirm-text{
+  font-size:1.15em;
+  line-height:1.5;
+  margin-bottom:14px;
+}
+
+#confirm-actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+}
+#confirm-actions .action-btn{
+  width:110px;
+}
+
+
 </style>
 </head>
 
@@ -420,6 +456,18 @@ body{
       </div>
 
     </div>
+
+    <!-- ===== 出售確認視窗 ===== -->
+    <div id="confirm-overlay" style="display:none;">
+      <div id="confirm-box">
+        <div id="confirm-text">是否出售XXX</div>
+        <div id="confirm-actions">
+          <button id="confirm-no" class="action-btn discard">否</button>
+          <button id="confirm-yes" class="action-btn">是</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 </div>
@@ -702,12 +750,12 @@ function pickRandom(list, k){
 }
 
 function getToolBuyCount(name){
-  return ownedTools.get(name) || 0;
+  const obj = ownedTools.get(name);
+  return obj ? obj.count : 0;
 }
 
 function getToolCurrentPrice(tool){
   const bought = getToolBuyCount(tool.name);
-  // bought = 0 → price[0], bought = 1 → price[1]...
   return tool.price[Math.min(bought, tool.price.length - 1)];
 }
 
@@ -715,6 +763,37 @@ function isToolSoldOut(tool){
   const bought = getToolBuyCount(tool.name);
   return bought >= tool.max;
 }
+
+
+function ownedGet(map, name){
+  return map.get(name) || { count:0, paid:[] };
+}
+
+function ownedAdd(map, name, paidPrice){
+  const obj = ownedGet(map, name);
+  obj.count += 1;
+  obj.paid.push(paidPrice);
+  map.set(name, obj);
+}
+
+function ownedRemoveOne(map, name){
+  const obj = ownedGet(map, name);
+  if(obj.count <= 0) return null;
+
+  obj.count -= 1;
+  const lastPaid = obj.paid.pop(); // 以「最後買入」作為本次售出的成本
+  if(obj.count <= 0){
+    map.delete(name);
+  }else{
+    map.set(name, obj);
+  }
+  return lastPaid; // 回傳這次售出的買入價
+}
+
+function sellPriceFromPaid(paidPrice){
+  return Math.floor(paidPrice / 2);
+}
+
 
 /* 生成商店貨架：6 隨機 + 2 固定（固定放最後）
    若固定已買完（售罄）→ 用隨機補滿到 8 格
@@ -809,14 +888,21 @@ function renderShop(){
   if(ownedTools.size === 0){
     ownedToolsGrid.innerHTML = `<div class="item-card"><div class="item-name">（尚未擁有道具）</div></div>`;
   }else{
-    [...ownedTools.entries()].forEach(([name,count])=>{
+    [...ownedTools.entries()].forEach(([name,obj])=>{
+      const lastPaid = obj.paid[obj.paid.length - 1] ?? 0;
+      const sellPrice = sellPriceFromPaid(lastPaid);
+
       const div = document.createElement('div');
       div.className = 'item-card';
+      div.style.cursor = 'pointer';
       div.innerHTML = `
         <div class="item-name">${name}</div>
         <div class="item-desc">（已擁有）永久道具</div>
-        <div class="item-meta">數量：${count}</div>
+        <div class="item-meta">數量：${obj.count}　　出售價格：${sellPrice}</div>
       `;
+      div.addEventListener('click', ()=>{
+        openSellConfirm('tool', name);
+      });
       ownedToolsGrid.appendChild(div);
     });
   }
@@ -826,18 +912,78 @@ function renderShop(){
   if(ownedConsumables.size === 0){
     ownedConsumablesGrid.innerHTML = `<div class="item-card"><div class="item-name">（尚未擁有消耗品）</div></div>`;
   }else{
-    [...ownedConsumables.entries()].forEach(([name,count])=>{
+    [...ownedConsumables.entries()].forEach(([name,obj])=>{
+      const lastPaid = obj.paid[obj.paid.length - 1] ?? 0;
+      const sellPrice = sellPriceFromPaid(lastPaid);
+
       const div = document.createElement('div');
       div.className = 'item-card';
+      div.style.cursor = 'pointer';
       div.innerHTML = `
         <div class="item-name">${name}</div>
         <div class="item-desc">（已擁有）消耗品</div>
-        <div class="item-meta">數量：${count}</div>
+        <div class="item-meta">數量：${obj.count}　　出售價格：${sellPrice}</div>
       `;
+      div.addEventListener('click', ()=>{
+        openSellConfirm('consumable', name);
+      });
       ownedConsumablesGrid.appendChild(div);
     });
   }
 }
+
+/* ===== 出售確認邏輯 ===== */
+const confirmOverlay = document.getElementById('confirm-overlay');
+const confirmText = document.getElementById('confirm-text');
+const confirmYes = document.getElementById('confirm-yes');
+const confirmNo = document.getElementById('confirm-no');
+
+let pendingSell = null; // { type:'tool'|'consumable', name:string }
+
+function openSellConfirm(type, name){
+  pendingSell = { type, name };
+  confirmText.textContent = `是否出售「${name}」？`;
+  confirmOverlay.style.display = 'flex';
+}
+
+function closeSellConfirm(){
+  pendingSell = null;
+  confirmOverlay.style.display = 'none';
+}
+
+confirmNo.addEventListener('click', closeSellConfirm);
+
+confirmYes.addEventListener('click', ()=>{
+  if(!pendingSell) return;
+
+  const { type, name } = pendingSell;
+
+  let paid = null;
+  if(type === 'tool'){
+    paid = ownedRemoveOne(ownedTools, name);
+  }else{
+    paid = ownedRemoveOne(ownedConsumables, name);
+  }
+
+  if(paid == null){
+    closeSellConfirm();
+    renderShop();
+    return;
+  }
+
+  const gain = sellPriceFromPaid(paid);
+  coins += gain;
+
+  // ✅ 賣掉後：商店之後有機會刷到
+  // 這裡不用立刻把它塞回本關貨架（避免違反「本關不刷新」）
+  // 只要它不再被視為 sold out，下次通關刷新就會有機會出現
+
+  showToastText(`出售成功 +${gain} 金幣`, 900);
+
+  closeSellConfirm();
+  renderShop();
+});
+
 
 /* ===== 購買行為（先做入庫 + 從商店消失/變價） ===== */
 function buyTool(tool){
@@ -849,8 +995,7 @@ function buyTool(tool){
 
   coins -= price;
 
-  const curr = getToolBuyCount(tool.name);
-  ownedTools.set(tool.name, curr + 1);
+  ownedAdd(ownedTools, tool.name, price);
 
   // ✅ 若達上限：從本關商店貨架移除（不補貨、不刷新）
   if(isToolSoldOut(tool)){
@@ -869,8 +1014,7 @@ function buyConsumable(item){
   }
   coins -= item.price;
 
-  const curr = ownedConsumables.get(item.name) || 0;
-  ownedConsumables.set(item.name, curr + 1);
+  ownedAdd(ownedConsumables, item.name, item.price);
 
   // 消耗品：買了也從當前商店貨架移除（你若想「可重複買」再改）
   shopConsumables = shopConsumables.filter(x=>x.name !== item.name);
