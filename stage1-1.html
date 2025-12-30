@@ -43,6 +43,35 @@ body{
   white-space:nowrap;
 }
 
+/* ===== 商店圖標 ===== */
+#shop-btn{
+  position:absolute;
+  top:12px;
+  right:12px;
+  width:56px;
+  height:56px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(0,0,0,0.35);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  z-index:5;
+  transition:transform 0.08s ease, background 0.2s ease, opacity 0.2s ease;
+  user-select:none;
+  -webkit-user-select:none;
+}
+#shop-btn:hover{ background:rgba(255,255,255,0.10); }
+#shop-btn:active{ transform:scale(0.97); }
+
+#shop-btn img{
+  width:70%;
+  height:70%;
+  object-fit:contain;
+  pointer-events:none;
+}
+
 /* ===== 提示 ===== */
 #toast{
   position:absolute;
@@ -158,6 +187,160 @@ body{
 .card:nth-child(10){z-index:10}
 .card:nth-child(11){z-index:11}
 
+/* ===== 商店 Overlay ===== */
+#shop-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.75);
+  z-index:999;
+  display:none;
+}
+#shop-overlay.show{ display:block; }
+
+#shop-panel{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:min(92vw, 720px);
+  height:min(82vh, 860px);
+  background:rgba(10,10,14,0.95);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 20px 70px rgba(0,0,0,0.6);
+  display:flex;
+  flex-direction:column;
+}
+
+/* 上方標題列（含關閉） */
+.shop-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.10);
+}
+.shop-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.shop-coin{
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(255,255,255,0.06);
+  color:#ffd24e;
+  font-weight:700;
+  white-space:nowrap;
+}
+.shop-title{
+  font-size:1.2em;
+  font-weight:700;
+  color:#00ffcc;
+}
+.shop-close{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(255,255,255,0.06);
+  color:#fff;
+  cursor:pointer;
+}
+.shop-close:active{ transform:scale(0.98); }
+
+/* 分頁列（像瀏覽器 tabs） */
+.tabs{
+  display:flex;
+  gap:8px;
+  padding:10px 10px 0;
+  background:rgba(255,255,255,0.03);
+}
+.tab{
+  flex:1;
+  padding:10px 8px;
+  border-radius:14px 14px 0 0;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.05);
+  color:#fff;
+  cursor:pointer;
+  font-size:1.05em;
+}
+.tab.active{
+  background:rgba(0,255,204,0.12);
+  border-color:rgba(0,255,204,0.28);
+  color:#b5fff0;
+}
+
+/* 內容區 */
+.shop-body{
+  flex:1;
+  padding:12px 12px 14px;
+  overflow:auto;
+}
+
+/* 次分頁（已擁有內的第二層 tabs） */
+.subtabs{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+  margin-bottom:10px;
+}
+.subtab{
+  flex:1;
+  padding:10px 8px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.05);
+  color:#fff;
+  cursor:pointer;
+  font-size:1.0em;
+}
+.subtab.active{
+  background:rgba(30,144,255,0.18);
+  border-color:rgba(30,144,255,0.35);
+}
+
+/* 商品格子 */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:10px;
+}
+
+.item-card{
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.05);
+  border-radius:14px;
+  padding:10px;
+  min-height:88px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.item-name{
+  font-weight:700;
+  font-size:1.05em;
+}
+.item-desc{
+  font-size:0.95em;
+  line-height:1.35;
+  color:rgba(255,255,255,0.85);
+}
+.item-meta{
+  margin-top:auto;
+  font-size:0.9em;
+  color:rgba(0,255,204,0.85);
+}
+
+/* 手機更窄時：改 1 欄 */
+@media (max-width: 420px){
+  .grid{ grid-template-columns:1fr; }
+}
+
 </style>
 </head>
 
@@ -174,6 +357,10 @@ body{
     <div class="hud-chip">牌庫：<span id="hud-deck">52</span></div>
   </div>
 
+  <div id="shop-btn" title="商店">
+    <img id="shop-icon" src="https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/shop.png" alt="shop">
+  </div>
+
   <div id="toast"></div>
 
   <div id="hand-area">
@@ -182,6 +369,56 @@ body{
     <div id="hand-actions">
       <button id="btn-play" class="action-btn">補給</button>
       <button id="btn-discard" class="action-btn discard">丟棄</button>
+    </div>
+  </div>
+
+  <!-- ===== 商店 Overlay ===== -->
+  <div id="shop-overlay">
+    <div id="shop-panel">
+
+      <div class="shop-header">
+        <div class="shop-title">商店</div>
+        <div class="shop-right">
+          <div class="shop-coin">金幣：<span id="shop-coin">0</span></div>
+          <button id="shop-close" class="shop-close">✕</button>
+        </div>
+      </div>
+
+      <!-- 第一層分頁：道具 / 消耗品 / 已擁有 -->
+      <div class="tabs">
+        <button class="tab active" data-tab="tab-tools">道具</button>
+        <button class="tab" data-tab="tab-consumables">消耗品</button>
+        <button class="tab" data-tab="tab-owned">已擁有</button>
+      </div>
+
+      <div class="shop-body">
+        <!-- 道具分頁內容 -->
+        <div id="tab-tools" class="tab-page">
+          <div class="grid" id="tools-grid"></div>
+        </div>
+
+        <!-- 消耗品分頁內容 -->
+        <div id="tab-consumables" class="tab-page" style="display:none;">
+          <div class="grid" id="consumables-grid"></div>
+        </div>
+
+        <!-- 已擁有分頁內容（含第二層 tabs） -->
+        <div id="tab-owned" class="tab-page" style="display:none;">
+          <div class="subtabs">
+            <button class="subtab active" data-subtab="owned-tools">道具</button>
+            <button class="subtab" data-subtab="owned-consumables">消耗品</button>
+          </div>
+
+          <div id="owned-tools" class="owned-page">
+            <div class="grid" id="owned-tools-grid"></div>
+          </div>
+
+          <div id="owned-consumables" class="owned-page" style="display:none;">
+            <div class="grid" id="owned-consumables-grid"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -288,6 +525,373 @@ function sortHand(arr){
   });
   return arr;
 }
+
+/* =========================================================
+   商店 UI（先做畫面，不做購買邏輯） 
+========================================================= */
+const shopOverlay = document.getElementById('shop-overlay');
+const shopClose = document.getElementById('shop-close');
+const shopTabs = [...document.querySelectorAll('.tab')];
+const tabPages = [...document.querySelectorAll('.tab-page')];
+
+const shopSubtabs = [...document.querySelectorAll('.subtab')];
+const ownedToolsPage = document.getElementById('owned-tools');
+const ownedConsumablesPage = document.getElementById('owned-consumables');
+
+const toolsGrid = document.getElementById('tools-grid');
+const consumablesGrid = document.getElementById('consumables-grid');
+const ownedToolsGrid = document.getElementById('owned-tools-grid');
+const ownedConsumablesGrid = document.getElementById('owned-consumables-grid');
+
+let isShopOpen = false;
+
+function setGamePaused(paused){
+  // 暫停：出牌/棄牌不能按 + 牌不能點
+  if(paused){
+    btnPlay.disabled = true;
+    btnDiscard.disabled = true;
+    handCards.style.pointerEvents = 'none';
+  }else{
+    handCards.style.pointerEvents = 'auto';
+    updateActionButtons(); // 依目前選牌/棄牌次數等狀態恢復
+  }
+}
+
+function openShop(){
+  isShopOpen = true;
+  shopOverlay.classList.add('show');
+  setGamePaused(true);
+  renderShop();
+}
+
+function closeShop(){
+  isShopOpen = false;
+  shopOverlay.classList.remove('show');
+  setGamePaused(false);
+}
+
+/* 點背景不關（避免誤觸），只點 X 關 */
+shopClose.addEventListener('click', closeShop);
+
+/* ESC 關閉（桌機方便，手機不影響） */
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && isShopOpen) closeShop();
+});
+
+/* 第一層分頁切換 */
+shopTabs.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    shopTabs.forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+
+    const targetId = btn.dataset.tab;
+    tabPages.forEach(p=>{
+      p.style.display = (p.id === targetId) ? '' : 'none';
+    });
+  });
+});
+
+/* 第二層分頁（已擁有）切換 */
+shopSubtabs.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    shopSubtabs.forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+
+    const target = btn.dataset.subtab;
+    if(target === 'owned-tools'){
+      ownedToolsPage.style.display = '';
+      ownedConsumablesPage.style.display = 'none';
+    }else{
+      ownedToolsPage.style.display = 'none';
+      ownedConsumablesPage.style.display = '';
+    }
+  });
+});
+
+/* ===== 先塞「假商品」來確認 UI ===== */
+function renderItemCard(parent, item){
+  const div = document.createElement('div');
+  div.className = 'item-card';
+  div.innerHTML = `
+    <div class="item-name">${item.name}</div>
+    <div class="item-desc">${item.desc}</div>
+    <div class="item-meta">${item.meta}</div>
+  `;
+  parent.appendChild(div);
+}
+
+/* ===== 金幣 & 商店資料 ===== */
+let coins = 80; // 先給測試用初始金幣（之後你要從關卡/存檔讀取再改）
+const shopCoinEl = document.getElementById('shop-coin');
+
+/* 道具清單（用 effect 當作顯示名；之後你要加 id 也行） */
+const TOOL_DATA = [
+  { name:"人頭牌 +5 燃料", price:[18], max:1 },
+  { name:"每關首次補給 +30% 燃料", price:[28], max:1 },
+  { name:"一關內每次補給，額外 +3 燃料", price:[22], max:1 },
+  { name:"補給 +20 燃料，每次通關後再永久 +2 燃料", price:[40], max:1 },
+  { name:"每棄1張牌，下次補給獲得燃料 +5%", price:[26], max:1 },
+  { name:"若補給只含人頭牌，+20% 燃料", price:[24], max:1 },
+  { name:"高牌的下次補給 +50% 燃料", price:[20], max:1 },
+  { name:"若補給包含3張牌以上，+20% 燃料", price:[18], max:1 },
+  { name:"目前牌組每少1張牌 +2 燃料", price:[18], max:1 },
+  { name:"一關內每使用過一種牌型 +6 燃料", price:[26], max:1 },
+  { name:"補給將不會移除人頭牌", price:[45], max:1 },
+
+  // 可多次購買（最多 2 次）
+  { name:"增加1棄牌次數", price:[24,34], max:2 },
+
+  // 可多次購買（最多 3 次）
+  { name:"手牌上限+1張", price:[28,38,48], max:3 },
+
+  { name:"黑桃和梅花視為同花色", price:[32], max:1 },
+  { name:"紅心和方塊視為同花色", price:[32], max:1 },
+  { name:"僅需4張牌即可構築順子、同花", price:[48], max:1 },
+  { name:"順子牌型每張牌可相差1點", price:[44], max:1 },
+  { name:"若補給包含5張牌，獲得1次棄牌次數", price:[34], max:1 },
+  { name:"每關首次補給回復 1 HP", price:[24], max:1 },
+  { name:"通關時若 HP ≤ 2，回復至 3", price:[20], max:1 },
+  { name:"每關每使用一種新牌型，回復 1 HP", price:[36], max:1 },
+  { name:"每關首次補給順子以上牌型，回復 1 HP", price:[22], max:1 },
+  { name:"最大 HP +1", price:[34], max:1 },
+  { name:"每通過一大關，最大 HP +1", price:[30], max:1 },
+  { name:"每關免疫第一次傷害", price:[28], max:1 },
+  { name:"使用鐵支/同花順/皇家同花順時，額外獲得一次補給", price:[36], max:1 },
+
+  { name:"在【極端溫差】星球補給 +15% 燃料", price:[18], max:1 },
+  { name:"在【稀薄/缺乏大氣】星球，每次補給移除的牌隨機少 1 張", price:[20], max:1 },
+  { name:"在【高壓環境】星球補給 +10 燃料", price:[16], max:1 },
+  { name:"在【劇烈能量風暴】星球的首次補給 +20% 燃料", price:[16], max:1 },
+  { name:"在【地質高度活躍】星球的補給包含 3 張或以下時，燃料 +25%", price:[18], max:1 },
+  { name:"在【生命或文明干擾】星球的首次棄牌不消耗次數", price:[18], max:1 },
+  { name:"在【極端低溫】星球的首次補給 +15 燃料", price:[18], max:1 },
+
+  // 固定道具（永遠在商店，但你說不要放最前面 → 我們會放最後）
+  { name:"通關金幣 +10%", price:[16], max:1, fixed:true },
+  { name:"若本關未使用棄牌，通關金幣 +30%", price:[20], max:1, fixed:true }
+];
+
+const CONSUMABLE_DATA = [
+  { name:"扣血頻率改為4次補給，持續一關", price:18 },
+  { name:"立即回復 2 HP", price:14 },
+  { name:"在【極端低溫】星球的下一次補給 +30% 燃料", price:12 },
+  { name:"下一次補給使用的牌全部不移除", price:16 },
+  { name:"獲得額外一次補給", price:20 },
+  { name:"下一次補給的牌型等級 +1", price:18 },
+  { name:"下一次補給若為高牌/一對/兩對， +25 燃料", price:16 },
+  { name:"立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫", price:14 }
+];
+
+/* 已擁有（之後你要存檔再接 localStorage 就好） */
+const ownedTools = new Map();        // key: name, value: count
+const ownedConsumables = new Map();  // key: name, value: count
+
+/* 商店當前貨架（每關/每次開店你可重抽；目前先「開店時如果空才抽」） */
+let shopTools = [];       // 8 格（含固定）
+let shopConsumables = []; // 2 格
+
+function updateShopCoin(){
+  shopCoinEl.textContent = coins;
+}
+
+/* 隨機抽樣工具 */
+function pickRandom(list, k){
+  const arr = [...list];
+  shuffle(arr);
+  return arr.slice(0, Math.min(k, arr.length));
+}
+
+function getToolBuyCount(name){
+  return ownedTools.get(name) || 0;
+}
+
+function getToolCurrentPrice(tool){
+  const bought = getToolBuyCount(tool.name);
+  // bought = 0 → price[0], bought = 1 → price[1]...
+  return tool.price[Math.min(bought, tool.price.length - 1)];
+}
+
+function isToolSoldOut(tool){
+  const bought = getToolBuyCount(tool.name);
+  return bought >= tool.max;
+}
+
+/* 生成商店貨架：6 隨機 + 2 固定（固定放最後）
+   若固定已買完（售罄）→ 用隨機補滿到 8 格
+*/
+function generateShopOffers(){
+  const fixedTools = TOOL_DATA.filter(t=>t.fixed);
+  const nonFixedTools = TOOL_DATA.filter(t=>!t.fixed);
+
+  const nonFixedAvailable = nonFixedTools.filter(t=>!isToolSoldOut(t));
+  const fixedAvailable = fixedTools.filter(t=>!isToolSoldOut(t));
+
+  // 先抽 6 個隨機（從非固定且可買的裡面）
+  const pickedNonFixed = pickRandom(nonFixedAvailable, 6);
+
+  // 固定放最後（但如果固定售罄就不放）
+  let result = [...pickedNonFixed, ...fixedAvailable];
+
+  // 若不足 8 格，從剩下的 nonFixedAvailable 補（避免重複）
+  const usedNames = new Set(result.map(x=>x.name));
+  const rest = nonFixedAvailable.filter(t=>!usedNames.has(t.name));
+  while(result.length < 8 && rest.length > 0){
+    const one = pickRandom(rest, 1)[0];
+    result.push(one);
+    usedNames.add(one.name);
+    const idx = rest.findIndex(t=>t.name===one.name);
+    if(idx !== -1) rest.splice(idx, 1);
+  }
+
+  // 最後確保「固定道具排在末端」
+  const nonFixedPart = result.filter(t=>!t.fixed);
+  const fixedPart = result.filter(t=>t.fixed);
+  shopTools = [...nonFixedPart, ...fixedPart].slice(0,8);
+
+  // 消耗品：抽 2 個
+  shopConsumables = pickRandom(CONSUMABLE_DATA, 2);
+}
+
+/* ===== 渲染卡片（含購買按鈕） ===== */
+function renderShop(){
+  updateShopCoin();
+
+  // 道具
+  toolsGrid.innerHTML = '';
+  shopTools.forEach(tool=>{
+    const bought = getToolBuyCount(tool.name);
+    const price = getToolCurrentPrice(tool);
+    const soldOut = isToolSoldOut(tool);
+
+    const div = document.createElement('div');
+    div.className = 'item-card';
+    div.innerHTML = `
+      <div class="item-name">${tool.name}</div>
+
+      <div class="item-meta">價格：${price}</div>
+      <button class="action-btn" style="margin-top:8px;" ${soldOut ? 'disabled' : ''}>
+        購買
+      </button>
+    `;
+
+    const btn = div.querySelector('button');
+    btn.addEventListener('click', ()=>{
+      buyTool(tool);
+    });
+
+    toolsGrid.appendChild(div);
+  });
+
+  // 消耗品
+  consumablesGrid.innerHTML = '';
+  shopConsumables.forEach(item=>{
+    const div = document.createElement('div');
+    div.className = 'item-card';
+    div.innerHTML = `
+      <div class="item-name">${item.name}</div>
+
+      <div class="item-meta">價格：${item.price}</div>
+      <button class="action-btn" style="margin-top:8px;">
+        購買
+      </button>
+    `;
+
+    const btn = div.querySelector('button');
+    btn.addEventListener('click', ()=>{
+      buyConsumable(item);
+    });
+
+    consumablesGrid.appendChild(div);
+  });
+
+  // 已擁有：道具
+  ownedToolsGrid.innerHTML = '';
+  if(ownedTools.size === 0){
+    ownedToolsGrid.innerHTML = `<div class="item-card"><div class="item-name">（尚未擁有道具）</div></div>`;
+  }else{
+    [...ownedTools.entries()].forEach(([name,count])=>{
+      const div = document.createElement('div');
+      div.className = 'item-card';
+      div.innerHTML = `
+        <div class="item-name">${name}</div>
+        <div class="item-desc">（已擁有）永久道具</div>
+        <div class="item-meta">數量：${count}</div>
+      `;
+      ownedToolsGrid.appendChild(div);
+    });
+  }
+
+  // 已擁有：消耗品
+  ownedConsumablesGrid.innerHTML = '';
+  if(ownedConsumables.size === 0){
+    ownedConsumablesGrid.innerHTML = `<div class="item-card"><div class="item-name">（尚未擁有消耗品）</div></div>`;
+  }else{
+    [...ownedConsumables.entries()].forEach(([name,count])=>{
+      const div = document.createElement('div');
+      div.className = 'item-card';
+      div.innerHTML = `
+        <div class="item-name">${name}</div>
+        <div class="item-desc">（已擁有）消耗品</div>
+        <div class="item-meta">數量：${count}</div>
+      `;
+      ownedConsumablesGrid.appendChild(div);
+    });
+  }
+}
+
+/* ===== 購買行為（先做入庫 + 從商店消失/變價） ===== */
+function buyTool(tool){
+  const price = getToolCurrentPrice(tool);
+  if(coins < price){
+    showToastText('金幣不足', 900);
+    return;
+  }
+
+  coins -= price;
+
+  const curr = getToolBuyCount(tool.name);
+  ownedTools.set(tool.name, curr + 1);
+
+  // ✅ 若達上限：從本關商店貨架移除（不補貨、不刷新）
+  if(isToolSoldOut(tool)){
+    shopTools = shopTools.filter(t=>t.name !== tool.name);
+  }
+
+  showToastText('購買成功', 700);
+  renderShop();
+}
+
+
+function buyConsumable(item){
+  if(coins < item.price){
+    showToastText('金幣不足', 900);
+    return;
+  }
+  coins -= item.price;
+
+  const curr = ownedConsumables.get(item.name) || 0;
+  ownedConsumables.set(item.name, curr + 1);
+
+  // 消耗品：買了也從當前商店貨架移除（你若想「可重複買」再改）
+  shopConsumables = shopConsumables.filter(x=>x.name !== item.name);
+
+  showToastText('購買成功', 700);
+  renderShop();
+}
+
+/* 開商店時若還沒抽貨，就抽一次並渲染 */
+function ensureShopOffers(){
+  if(shopTools.length === 0 && shopConsumables.length === 0){
+    generateShopOffers();
+  }
+  renderShop();
+}
+
+function refreshShopForNewLevel(){
+  generateShopOffers(); // 6 隨機 + 固定放最後 + 消耗品2
+  renderShop();
+}
+
 
 /* =========================================================
    工具
@@ -591,6 +1195,11 @@ btnDiscard.addEventListener('click', ()=>{
   showToastText(`丟棄：${discardCards.length} 張`, 800);
 });
 
+const shopBtn = document.getElementById('shop-btn');
+
+shopBtn.addEventListener('click', openShop);
+
+
 /* =========================================================
    初始化
 ========================================================= */
@@ -640,6 +1249,8 @@ function boot(){
 }
 
 boot();
+refreshShopForNewLevel();
+
 
 </script>
 
