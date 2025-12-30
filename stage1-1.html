@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Card Supply Game</title>
+
+<style>
+body{
+  margin:0;
+  background:#000;
+  font-family:'Noto Sans TC',sans-serif;
+  color:#fff;
+  overflow:hidden;
+}
+
+#game-screen{
+  position:relative;
+  width:100%;
+  height:100vh;
+}
+
+/* ===== HUD ===== */
+#hud{
+  position:absolute;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:14px;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:wrap;
+  z-index:3;
+  font-size:1.05em;
+}
+
+.hud-chip{
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:999px;
+  padding:8px 12px;
+  white-space:nowrap;
+}
+
+/* ===== 提示 ===== */
+#toast{
+  position:absolute;
+  bottom: calc(32vh + 2vh + 10px);
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,0.75);
+  padding:0.8em 1.5em;
+  border-radius:12px;
+  font-size:1.2em;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.25s ease;
+  z-index:4;
+}
+#toast.show{ opacity:1; }
+
+/* ===== 手牌區（左手牌 + 右側按鈕） ===== */
+#hand-area{
+  position:absolute;
+  bottom:0;
+  width:100%;
+  height:32vh;
+  display:flex;
+  justify-content:center;
+  align-items:flex-end;
+  padding:0 3vw 2vh;
+  box-sizing:border-box;
+  z-index:2;
+}
+
+/* 左邊：手牌容器 */
+#hand-cards{
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  flex:1;
+  min-width:0;
+}
+
+/* 右邊：按鈕欄 */
+#hand-actions{
+  width:92px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  align-items:stretch;
+  margin-left:12px;
+  padding-bottom:0px;
+}
+
+/* 按鈕樣式 */
+.action-btn{
+  padding:0.9em 0.2em;
+  font-size:1.1em;
+  border-radius:14px;
+  border:none;
+  cursor:pointer;
+  background:#1e90ff;
+  color:white;
+  transition:background 0.25s ease, transform 0.08s ease, opacity 0.15s ease;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.action-btn:disabled{
+  opacity: 0.45;
+  filter: grayscale(0.2);
+  cursor: not-allowed;
+  transform: none;
+}
+.action-btn:hover{ background:#63b3ed; }
+.action-btn:active{ transform:scale(0.98); }
+
+/* 棄牌 */
+.action-btn.discard{
+  background:#ff5b5b;
+}
+.action-btn.discard:hover{
+  background:#ff8a8a;
+}
+
+/* ===== 卡牌 ===== */
+.card{
+  position:relative;
+  width:87.5px;
+  height:122.5px;
+  margin-left:-43.5px;
+  transition:transform 0.2s ease;
+}
+.card:first-child{ margin-left:0; }
+
+.card img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  pointer-events:none;
+}
+
+.card.selected{
+  transform:translateY(-30px);
+}
+
+/* 疊放順序（最多 11 張） */
+.card{ z-index:1; }
+.card:nth-child(2){z-index:2}
+.card:nth-child(3){z-index:3}
+.card:nth-child(4){z-index:4}
+.card:nth-child(5){z-index:5}
+.card:nth-child(6){z-index:6}
+.card:nth-child(7){z-index:7}
+.card:nth-child(8){z-index:8}
+.card:nth-child(9){z-index:9}
+.card:nth-child(10){z-index:10}
+.card:nth-child(11){z-index:11}
+
+</style>
+</head>
+
+<body>
+
+<div id="game-screen">
+
+  <div id="hud">
+    <div class="hud-chip">大關：<span id="hud-stage">1</span></div>
+    <div class="hud-chip">關卡：<span id="hud-level">1</span></div>
+    <div class="hud-chip">HP：<span id="hud-hp">3</span></div>
+    <div class="hud-chip">燃料：<span id="hud-fuel">0</span>/<span id="hud-target">120</span></div>
+    <div class="hud-chip">棄牌：<span id="hud-discards">3</span></div>
+    <div class="hud-chip">牌庫：<span id="hud-deck">52</span></div>
+  </div>
+
+  <div id="toast"></div>
+
+  <div id="hand-area">
+    <div id="hand-cards"></div>
+
+    <div id="hand-actions">
+      <button id="btn-play" class="action-btn">補給</button>
+      <button id="btn-discard" class="action-btn discard">丟棄</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================
+   規格可調區（之後你補完整規則，我只改這裡就能對齊）
+========================================================= */
+let HAND_SIZE = 8;                 // 可由道具升到 11（你之後改這裡即可）
+const HAND_SIZE_MAX = 11;
+const MAX_SELECT = 5;
+
+const CARD_IMAGE_PATH = 'https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/';
+
+// 每關棄牌次數（預設 3 次）
+const DISCARD_PER_LEVEL = 3;
+
+// 大關補給扣 HP 規則：每 N 次補給扣 1 HP
+const SUPPLY_PER_HP_BY_STAGE = { 1: 3, 2: 2, 3: 1 };
+
+// 牌型燃料表（先給一組合理預設，之後你可以改成你的平衡）
+const FUEL_BY_HANDTYPE = {
+  "高牌": 10,
+  "一對": 20,
+  "兩對": 35,
+  "三條": 50,
+  "順子": 70,
+  "同花": 80,
+  "葫蘆": 110,
+  "鐵支": 160,
+  "同花順": 220
+};
+
+// 每關燃料門檻（示範用，之後你可以改成每關不同）
+const TARGET_FUEL_BY_LEVEL = (stage, level) => 120 + (stage-1)*60 + (level-1)*20;
+
+/* =========================================================
+   DOM
+========================================================= */
+const toast = document.getElementById('toast');
+
+const handCards = document.getElementById('hand-cards');
+const btnPlay = document.getElementById('btn-play');
+const btnDiscard = document.getElementById('btn-discard');
+
+const hudStage = document.getElementById('hud-stage');
+const hudLevel = document.getElementById('hud-level');
+const hudHP = document.getElementById('hud-hp');
+const hudFuel = document.getElementById('hud-fuel');
+const hudTarget = document.getElementById('hud-target');
+const hudDiscards = document.getElementById('hud-discards');
+const hudDeck = document.getElementById('hud-deck');
+
+/* =========================================================
+   牌庫定義（52 張）
+========================================================= */
+const SUITS = ['S','H','D','C'];
+const RANKS = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+let deck = [];
+
+SUITS.forEach(suit=>{
+  RANKS.forEach(rank=>{
+    deck.push({
+      suit: suit,
+      rank: rank,
+      img: `${suit}${rank}.png`
+    });
+  });
+});
+
+/* =========================================================
+   遊戲狀態
+========================================================= */
+let bigStage = 1;          // 大關：1~3（你規格）
+let level = 1;             // 小關（示範用）
+let hp = 3;
+
+let fuel = 0;
+let targetFuel = 0;
+
+let discardsLeft = DISCARD_PER_LEVEL;
+let supplyCountInStage = 0;  // 本大關補給次數累積，用來扣 HP
+
+let drawPile = [];  // 可抽牌庫（會變）
+let hand = [];      // 手牌（會變）
+let played = [];    // 已出牌（不回牌庫）
+
+/* =========================================================
+   排序（你指定：點數優先，花色 S→H→D→C）
+========================================================= */
+const RANK_ORDER = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+const SUIT_ORDER = ['S','H','D','C'];
+
+function sortHand(arr){
+  arr.sort((a,b)=>{
+    const ra = RANK_ORDER.indexOf(a.rank);
+    const rb = RANK_ORDER.indexOf(b.rank);
+    if(ra !== rb) return ra - rb;
+
+    const sa = SUIT_ORDER.indexOf(a.suit);
+    const sb = SUIT_ORDER.indexOf(b.suit);
+    return sa - sb;
+  });
+  return arr;
+}
+
+/* =========================================================
+   工具
+========================================================= */
+function shuffle(array){
+  for(let i=array.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [array[i],array[j]] = [array[j],array[i]];
+  }
+}
+
+function selectedCount(){
+  return document.querySelectorAll('.card.selected').length;
+}
+function getSelectedCardIds(){
+  return [...document.querySelectorAll('.card.selected')].map(el => el.dataset.id);
+}
+
+function removeCardsFromHandByIds(ids){
+  const removed = [];
+  ids.forEach(id=>{
+    const idx = hand.findIndex(c => (c.suit + c.rank) === id);
+    if(idx !== -1){
+      removed.push(hand.splice(idx,1)[0]);
+    }
+  });
+  return removed;
+}
+
+let toastTimer = null;
+function showToastText(text, ms=900){
+  toast.textContent = text;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{
+    toast.classList.remove('show');
+  }, ms);
+}
+
+function updateActionButtons(){
+  const hasSelected = selectedCount() > 0;
+  btnPlay.disabled = !hasSelected || hp <= 0;                 // 沒選牌 / 沒血 不能補給
+  btnDiscard.disabled = !hasSelected || discardsLeft <= 0;    // 沒選牌 / 沒棄牌次數 不能丟棄
+}
+
+function saveProgress(){
+  const data = {
+    bigStage,
+    level,
+    hp,
+    fuel,
+    targetFuel,
+    discardsLeft,
+    supplyCountInStage,
+    HAND_SIZE,
+
+    // 牌堆狀態（跨頁保持最穩）
+    drawPile,
+    hand,
+    played
+  };
+  localStorage.setItem('gameState', JSON.stringify(data));
+}
+
+function goToKnowledgePage(){
+  saveProgress();
+  location.href = 'knowledge_stage1_level1.html'; // ✅ 改成你該關的知識頁網址
+}
+
+
+/* =========================================================
+   抽牌 / 發牌 / UI render
+========================================================= */
+function initBigStageResetDeck(){
+  // 每過一大關，牌庫重置為完整 52 張（你規格）
+  drawPile = [...deck];
+  shuffle(drawPile);
+  played = [];
+}
+
+function drawFromPile(n){
+  for(let i=0;i<n;i++){
+    if(drawPile.length <= 0){
+      showToastText('牌庫已空', 1100);
+      break;
+    }
+    hand.push(drawPile.pop());
+  }
+}
+
+function renderHand(){
+  handCards.innerHTML = '';
+
+  // 依規格排序顯示（但 hand 本身不必真的重排也沒關係）
+  const sorted = [...hand];
+  sortHand(sorted);
+
+  sorted.forEach(cardData=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.rank = cardData.rank;
+    card.dataset.suit = cardData.suit;
+    card.dataset.id = cardData.suit + cardData.rank;
+
+    const img = document.createElement('img');
+    img.src = CARD_IMAGE_PATH + cardData.img;
+
+    card.appendChild(img);
+
+    card.addEventListener('click',()=>{
+      if(card.classList.contains('selected')){
+        card.classList.remove('selected');
+        updateActionButtons();
+        return;
+      }
+      if(selectedCount() >= MAX_SELECT){
+        showToastText('已達出/棄牌上限', 900);
+        return;
+      }
+      card.classList.add('selected');
+      updateActionButtons();
+    });
+
+    handCards.appendChild(card);
+  });
+
+  updateActionButtons();
+}
+
+function updateHUD(){
+  hudStage.textContent = bigStage;
+  hudLevel.textContent = level;
+  hudHP.textContent = hp;
+  hudFuel.textContent = fuel;
+  hudTarget.textContent = targetFuel;
+  hudDiscards.textContent = discardsLeft;
+  hudDeck.textContent = drawPile.length;
+}
+
+/* =========================================================
+   牌型判斷（最多 5 張）
+   - 你現在規格是「依牌型得燃料」，我先做完整撲克牌型
+========================================================= */
+function rankValue(r){
+  return RANK_ORDER.indexOf(r); // 0..12
+}
+
+function evaluateHand(cards){
+  // cards: 1~5 張
+  const n = cards.length;
+  if(n === 0) return { type:"高牌", fuelGain:0 };
+
+  const ranks = cards.map(c=>c.rank).sort((a,b)=>rankValue(a)-rankValue(b));
+  const suits = cards.map(c=>c.suit);
+
+  const counts = {};
+  ranks.forEach(r => counts[r] = (counts[r]||0)+1);
+  const countList = Object.values(counts).sort((a,b)=>b-a); // e.g. [3,2]
+
+  const isFlush = suits.every(s=>s===suits[0]);
+
+  // straight：需要 5 張才判
+  let isStraight = false;
+  if(n === 5){
+    const vals = ranks.map(rankValue).sort((a,b)=>a-b);
+    // 一般順子
+    isStraight = vals.every((v,i)=> i===0 || v === vals[i-1]+1);
+
+    // A2345 特例：A,2,3,4,5 => vals = [0,1,2,3,12]
+    if(!isStraight){
+      const wheel = [0,1,2,3,12];
+      isStraight = wheel.every((v,i)=>vals[i]===v);
+    }
+  }
+
+  let type = "高牌";
+
+  if(n === 5 && isStraight && isFlush) type = "同花順";
+  else if(countList[0] === 4) type = "鐵支";
+  else if(countList[0] === 3 && countList[1] === 2) type = "葫蘆";
+  else if(n === 5 && isFlush) type = "同花";
+  else if(n === 5 && isStraight) type = "順子";
+  else if(countList[0] === 3) type = "三條";
+  else if(countList[0] === 2 && countList[1] === 2) type = "兩對";
+  else if(countList[0] === 2) type = "一對";
+  else type = "高牌";
+
+  const fuelGain = FUEL_BY_HANDTYPE[type] ?? 0;
+  return { type, fuelGain };
+}
+
+/* =========================================================
+   關卡流程（先做最小可玩）
+========================================================= */
+function startLevel(){
+  // 每關重置棄牌次數
+  discardsLeft = DISCARD_PER_LEVEL;
+
+  // 本關燃料門檻
+  targetFuel = TARGET_FUEL_BY_LEVEL(bigStage, level);
+
+  // 建立牌庫（若是新大關會另外 reset，這裡只確保有牌）
+  initBigStageResetDeck();
+
+  // 發手牌
+  hand = [];
+  drawFromPile(Math.min(HAND_SIZE, HAND_SIZE_MAX));
+  renderHand();
+
+  updateHUD();
+  showToastText('開始關卡', 700);
+}
+
+function passLevel(){
+  showToastText('通關！', 1000);
+  setTimeout(goToKnowledgePage, 600); // 讓提示先閃一下再跳
+}
+
+
+function gameOver(){
+  showToastText('HP 歸零，遊戲結束', 1300);
+  renderHand();
+  updateHUD();
+}
+
+/* =========================================================
+   補給（出牌） / 丟棄（棄牌）
+========================================================= */
+btnPlay.addEventListener('click', ()=>{
+  const ids = getSelectedCardIds();
+  if(ids.length === 0) return;
+
+  if(hp <= 0){
+    showToastText('沒有 HP 了', 1000);
+    return;
+  }
+
+  // 1) 從手牌移除選中的牌
+  const outCards = removeCardsFromHandByIds(ids);
+
+  // 2) 放進已出牌堆（不回牌庫）
+  played.push(...outCards);
+
+  // 3) 依牌型加燃料
+  const result = evaluateHand(outCards);
+  fuel += result.fuelGain;
+
+  // 4) 補牌：出幾張補幾張
+  drawFromPile(outCards.length);
+
+  // 5) 補給次數計數 → 依大關扣 HP
+  supplyCountInStage += 1;
+  const perHP = SUPPLY_PER_HP_BY_STAGE[bigStage] ?? 3;
+  if(supplyCountInStage % perHP === 0){
+    hp -= 1;
+    if(hp <= 0){
+      hp = 0;
+      renderHand();
+      updateHUD();
+      gameOver();
+      return;
+    }
+  }
+
+  // 6) 重新 render
+  renderHand();
+  updateHUD();
+
+  showToastText(`${result.type} +${result.fuelGain} 燃料`, 1500);
+
+  // 7) 通關判斷
+  if(fuel >= targetFuel){
+    passLevel();
+  }
+});
+
+btnDiscard.addEventListener('click', ()=>{
+  const ids = getSelectedCardIds();
+  if(ids.length === 0) return;
+
+  if(discardsLeft <= 0){
+    showToastText('本關棄牌用完', 1000);
+    return;
+  }
+
+  // 1) 先把棄牌從手牌移除（暫存）
+  const discardCards = removeCardsFromHandByIds(ids);
+
+  // 2) 先抽牌補回手牌（避免立刻抽回同張）
+  drawFromPile(discardCards.length);
+
+  // 3) 再把棄牌放回牌庫並洗牌
+  drawPile.push(...discardCards);
+  shuffle(drawPile);
+
+  discardsLeft -= 1;
+
+  renderHand();
+  updateHUD();
+
+  showToastText(`丟棄：${discardCards.length} 張`, 800);
+});
+
+/* =========================================================
+   初始化
+========================================================= */
+startLevel();
+</script>
+
+</body>
+</html>
