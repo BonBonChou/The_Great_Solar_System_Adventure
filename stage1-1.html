@@ -594,7 +594,53 @@ btnDiscard.addEventListener('click', ()=>{
 /* =========================================================
    初始化
 ========================================================= */
-startLevel();
+function loadProgress(){
+  const raw = localStorage.getItem('gameState');
+  return raw ? JSON.parse(raw) : null;
+}
+
+function applyProgress(state){
+  bigStage = state.bigStage ?? 1;
+  level = state.level ?? 1;
+  hp = state.hp ?? 3;
+  fuel = state.fuel ?? 0;
+  targetFuel = state.targetFuel ?? TARGET_FUEL_BY_LEVEL(bigStage, level);
+  discardsLeft = state.discardsLeft ?? DISCARD_PER_LEVEL;
+  supplyCountInStage = state.supplyCountInStage ?? 0;
+  HAND_SIZE = state.HAND_SIZE ?? 8;
+
+  drawPile = state.drawPile ?? [];
+  hand = state.hand ?? [];
+  played = state.played ?? [];
+
+  // 如果你希望「每進關卡頁都重算門檻」
+  targetFuel = TARGET_FUEL_BY_LEVEL(bigStage, level);
+}
+
+function boot(){
+  const state = loadProgress();
+  if(state){
+    applyProgress(state);
+    // 若本頁是新一關的開始，你可以在這裡做必要的重置（例如：若手牌是空的就補到 HAND_SIZE）
+    if(hand.length === 0){
+      // 確保牌庫存在，沒有就重置
+      if(!drawPile || drawPile.length === 0){
+        drawPile = [...deck];
+        shuffle(drawPile);
+        played = [];
+      }
+      drawFromPile(HAND_SIZE);
+    }
+    renderHand();
+    updateHUD();
+  }else{
+    // 沒進度 → 當成新遊戲
+    startLevel();
+  }
+}
+
+boot();
+
 </script>
 
 </body>
