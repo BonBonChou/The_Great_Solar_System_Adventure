@@ -187,6 +187,91 @@ body{
 .card:nth-child(10){z-index:10}
 .card:nth-child(11){z-index:11}
 
+/* ===== 左上 HUD ===== */
+#hud-left{
+  position:absolute;
+  top:10px;
+  left:10px;
+  z-index:6;
+  width:min(520px, 92vw);
+}
+
+#hud-toprow{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.hud-chip{
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:999px;
+  padding:8px 12px;
+  white-space:nowrap;
+  font-size:1.05em;
+}
+
+/* ===== HP 血條 ===== */
+#hp-wrap{
+  margin-top:10px;
+}
+
+#hp-bar{
+  position:relative;
+  height:22px;
+  border-radius:999px;
+  background:rgba(255,255,255,0.10);
+  border:1px solid rgba(255,255,255,0.14);
+  overflow:hidden;
+}
+
+#hp-fill{
+  position:absolute;
+  left:0;
+  top:0;
+  height:100%;
+  width:50%;
+  background:rgba(255,70,70,0.85);
+  transition:width 0.25s ease;
+}
+
+#hp-text{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  font-size:0.95em;
+  font-weight:700;
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,0.6);
+  pointer-events:none;
+}
+
+/* ===== 星球名稱（小關） ===== */
+#level-name{
+  margin-top:10px;
+  font-size:1.7em;
+  font-weight:800;
+  color:#00ffcc;
+  text-shadow:0 2px 10px rgba(0,0,0,0.45);
+}
+
+/* ===== 中央星球圖片 ===== */
+#planet-image{
+  position:absolute;
+  left:50%;
+  top:48%;
+  transform:translate(-50%,-50%);
+  width:min(70vw, 440px);
+  height:auto;
+  object-fit:contain;
+  z-index:1;
+  opacity:0.95;
+  pointer-events:none;
+}
+
+
 /* ===== 商店 Overlay ===== */
 #shop-overlay{
   position:absolute;
@@ -384,14 +469,26 @@ body{
 
 <div id="game-screen">
 
-  <div id="hud">
-    <div class="hud-chip">大關：<span id="hud-stage">1</span></div>
-    <div class="hud-chip">關卡：<span id="hud-level">1</span></div>
-    <div class="hud-chip">HP：<span id="hud-hp">3</span></div>
-    <div class="hud-chip">燃料：<span id="hud-fuel">0</span>/<span id="hud-target">120</span></div>
-    <div class="hud-chip">棄牌：<span id="hud-discards">3</span></div>
-    <div class="hud-chip">牌庫：<span id="hud-deck">52</span></div>
+  <!-- ===== 左上 HUD（大關/燃料/棄牌 + 血條 + 星球名） ===== -->
+  <div id="hud-left">
+    <div id="hud-toprow">
+      <div class="hud-chip" id="hud-stage-text">第一大關</div>
+      <div class="hud-chip">燃料：<span id="hud-fuel">0</span>/<span id="hud-target">0</span></div>
+      <div class="hud-chip">棄牌：<span id="hud-discards">0</span></div>
+    </div>
+
+    <div id="hp-wrap">
+      <div id="hp-bar">
+        <div id="hp-fill"></div>
+        <div id="hp-text">HP: 0/0</div>
+      </div>
+    </div>
+
+    <div id="level-name">（星球名稱）</div>
   </div>
+
+  <!-- ===== 畫面中央星球圖 ===== -->
+  <img id="planet-image" src="" alt="planet">
 
   <div id="shop-btn" title="商店">
     <img id="shop-icon" src="https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/shop.png" alt="shop">
@@ -501,8 +598,37 @@ const FUEL_BY_HANDTYPE = {
   "同花順": 220
 };
 
-// 每關燃料門檻（示範用，之後你可以改成每關不同）
-const TARGET_FUEL_BY_LEVEL = (stage, level) => 120 + (stage-1)*60 + (level-1)*20;
+/* ===== 關卡資料 =====
+   
+=========================*/
+const STAGE_INFO = {
+  1: { baseMaxHP: 10 },
+  2: { baseMaxHP: 8 },
+  3: { baseMaxHP: 6 }
+};
+
+const LEVELS = [
+  // 第一大關
+  { stage:1, name:"水星", targetFuel:60, passCoins:10, image:"https://raw.githubusercontent.com/BonBonChou/Dora/main/images//mercury.webp" },
+  { stage:1, name:"金星", targetFuel:70, passCoins:12, image:"" },
+  { stage:1, name:"地球", targetFuel:80, passCoins:14, image:"" },
+  { stage:1, name:"火星", targetFuel:90, passCoins:16, image:"" },
+
+  // 第二大關
+  { stage:2, name:"木星", targetFuel:140, passCoins:22, image:"" },
+  { stage:2, name:"艾歐", targetFuel:160, passCoins:25, image:"" },
+  { stage:2, name:"歐羅巴", targetFuel:175, passCoins:28, image:"" },
+  { stage:2, name:"土星", targetFuel:190, passCoins:32, image:"" },
+
+  // 第三大關
+  { stage:3, name:"天王星", targetFuel:210, passCoins:45, image:"" },
+  { stage:3, name:"海王星", targetFuel:230, passCoins:50, image:"" },
+  { stage:3, name:"冥王星", targetFuel:250, passCoins:60, image:"" },
+];
+
+// 目前關卡指標（用 index 最好管理）
+let levelIndex = 0; // 0=水星，1=金星... 你之後可用存檔記住
+
 
 /* =========================================================
    DOM
@@ -513,13 +639,15 @@ const handCards = document.getElementById('hand-cards');
 const btnPlay = document.getElementById('btn-play');
 const btnDiscard = document.getElementById('btn-discard');
 
-const hudStage = document.getElementById('hud-stage');
-const hudLevel = document.getElementById('hud-level');
-const hudHP = document.getElementById('hud-hp');
+const hudStageText = document.getElementById('hud-stage-text');
 const hudFuel = document.getElementById('hud-fuel');
 const hudTarget = document.getElementById('hud-target');
 const hudDiscards = document.getElementById('hud-discards');
-const hudDeck = document.getElementById('hud-deck');
+const hpFill = document.getElementById('hp-fill');
+const hpText = document.getElementById('hp-text');
+const levelNameEl = document.getElementById('level-name');
+const planetImageEl = document.getElementById('planet-image');
+
 
 /* =========================================================
    牌庫定義（52 張）
@@ -554,6 +682,20 @@ let supplyCountInStage = 0;  // 本大關補給次數累積，用來扣 HP
 let drawPile = [];  // 可抽牌庫（會變）
 let hand = [];      // 手牌（會變）
 let played = [];    // 已出牌（不回牌庫）
+
+let maxHP = 0;
+
+function computeMaxHP(){
+  // 基礎血量取決於大關（你圖：10/8/6）
+  const base = STAGE_INFO[bigStage]?.baseMaxHP ?? 10;
+
+  // TODO：之後接道具：
+  // - "最大 HP +1"（永久）
+  // - "每通過一大關，最大 HP +1"（依大關累積）
+  const bonus = 0;
+
+  return base + bonus;
+}
 
 /* =========================================================
    排序（你指定：點數優先，花色 S→H→D→C）
@@ -1047,6 +1189,11 @@ function shuffle(array){
   }
 }
 
+function stageToChinese(n){
+  const map = {1:"一",2:"二",3:"三"};
+  return map[n] || String(n);
+}
+
 function selectedCount(){
   return document.querySelectorAll('.card.selected').length;
 }
@@ -1104,6 +1251,27 @@ function goToKnowledgePage(){
   saveProgress();
   location.href = 'knowledge_stage1_level1.html'; // ✅ 改成你該關的知識頁網址
 }
+
+function updateHUD(){
+  // 大關中文：第X大關
+  hudStageText.textContent = `第${stageToChinese(bigStage)}大關`;
+
+  hudFuel.textContent = fuel;
+  hudTarget.textContent = targetFuel;
+  hudDiscards.textContent = discardsLeft;
+
+  // 血條
+  const ratio = maxHP > 0 ? (hp / maxHP) : 0;
+  hpFill.style.width = `${Math.max(0, Math.min(1, ratio)) * 100}%`;
+  hpText.textContent = `HP: ${hp}/${maxHP}`;
+
+  // 星球名 + 中央圖片
+  const info = LEVELS[levelIndex];
+  levelNameEl.textContent = info?.name ?? "（未知星球）";
+  planetImageEl.src = info?.image || ""; // 你填了網址就會顯示
+  planetImageEl.style.display = (planetImageEl.src ? "" : "none");
+}
+
 
 
 /* =========================================================
@@ -1165,16 +1333,6 @@ function renderHand(){
   updateActionButtons();
 }
 
-function updateHUD(){
-  hudStage.textContent = bigStage;
-  hudLevel.textContent = level;
-  hudHP.textContent = hp;
-  hudFuel.textContent = fuel;
-  hudTarget.textContent = targetFuel;
-  hudDiscards.textContent = discardsLeft;
-  hudDeck.textContent = drawPile.length;
-}
-
 /* =========================================================
    牌型判斷（最多 5 張）
    - 你現在規格是「依牌型得燃料」，我先做完整撲克牌型
@@ -1231,13 +1389,22 @@ function evaluateHand(cards){
    關卡流程（先做最小可玩）
 ========================================================= */
 function startLevel(){
+  refreshShopForNewLevel();
+  const info = LEVELS[levelIndex];
+
+  bigStage = info.stage;
+  targetFuel = info.targetFuel;
+
+  // maxHP / hp（如果你希望「進入新大關時 hp = maxHP」也可調）
+  maxHP = computeMaxHP();
+  hp = Math.min(hp, maxHP);
+  if(hp <= maxHP) hp = maxHP; // 若你想新開局就滿血；不想就刪這行
+
   // 每關重置棄牌次數
   discardsLeft = DISCARD_PER_LEVEL;
 
-  // 本關燃料門檻
-  targetFuel = TARGET_FUEL_BY_LEVEL(bigStage, level);
-
-  // 建立牌庫（若是新大關會另外 reset，這裡只確保有牌）
+  // 每過一大關牌庫重置（你之後通關跳知識頁時會做更精準判定）
+  // 這裡先確保可玩：每關都重置也行，但你若希望「同大關內不重置」再調
   initBigStageResetDeck();
 
   // 發手牌
@@ -1246,8 +1413,8 @@ function startLevel(){
   renderHand();
 
   updateHUD();
-  showToastText('開始關卡', 700);
 }
+
 
 function passLevel(){
   showToastText('通關！', 1000);
@@ -1353,21 +1520,56 @@ function loadProgress(){
 }
 
 function applyProgress(state){
-  bigStage = state.bigStage ?? 1;
-  level = state.level ?? 1;
-  hp = state.hp ?? 3;
+  // ✅ 用 levelIndex 作為唯一關卡定位（建議你存檔一定存）
+  levelIndex = state.levelIndex ?? 0;
+
+  // 取出該關資料（燃料門檻/大關/星球名...）
+  const info = LEVELS[levelIndex] || LEVELS[0];
+
+  bigStage = info.stage;
+
+  // ✅ fuel / targetFuel
   fuel = state.fuel ?? 0;
-  targetFuel = state.targetFuel ?? TARGET_FUEL_BY_LEVEL(bigStage, level);
+  targetFuel = state.targetFuel ?? info.targetFuel; // 以存檔為主，沒有就用表
+
+  // ✅ HP / maxHP（maxHP 建議也存，但沒存就重算）
+  maxHP = state.maxHP ?? computeMaxHP();
+  hp = state.hp ?? maxHP;
+
+  // ✅ 棄牌 / 補給計數 / 手牌上限
   discardsLeft = state.discardsLeft ?? DISCARD_PER_LEVEL;
   supplyCountInStage = state.supplyCountInStage ?? 0;
   HAND_SIZE = state.HAND_SIZE ?? 8;
 
+  // ✅ 牌堆
   drawPile = state.drawPile ?? [];
   hand = state.hand ?? [];
   played = state.played ?? [];
 
-  // 如果你希望「每進關卡頁都重算門檻」
-  targetFuel = TARGET_FUEL_BY_LEVEL(bigStage, level);
+  // ✅ 金幣/商店/已擁有（你後面一定要存，我先在這裡接鉤子）
+  coins = state.coins ?? coins; // coins 若你有預設值就保留
+  shopTools = state.shopTools ?? shopTools;
+  shopConsumables = state.shopConsumables ?? shopConsumables;
+
+  // ownedTools/ownedConsumables 若你已經改成 Map+paid 結構，會需要轉回 Map
+  if(state.ownedTools) ownedToolsFromState(state.ownedTools);
+  if(state.ownedConsumables) ownedConsumablesFromState(state.ownedConsumables);
+
+  // 最後：確保 HUD 用的門檻/大關一致
+  targetFuel = info.targetFuel; // 若你希望永遠以表為準就留這行；若以存檔為準就刪掉這行
+}
+
+function ownedToolsFromState(obj){
+  ownedTools.clear();
+  Object.entries(obj).forEach(([name, data])=>{
+    ownedTools.set(name, { count: data.count, paid: data.paid || [] });
+  });
+}
+function ownedConsumablesFromState(obj){
+  ownedConsumables.clear();
+  Object.entries(obj).forEach(([name, data])=>{
+    ownedConsumables.set(name, { count: data.count, paid: data.paid || [] });
+  });
 }
 
 function boot(){
@@ -1393,7 +1595,6 @@ function boot(){
 }
 
 boot();
-refreshShopForNewLevel();
 
 
 </script>
