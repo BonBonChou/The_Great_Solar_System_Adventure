@@ -1049,9 +1049,9 @@ function renderShop(){
       div.style.cursor = 'pointer';
       div.innerHTML = `
         <div class="item-name">${name}</div>
-        <div class="item-desc">（已擁有）永久道具</div>
         <div class="item-meta">數量：${obj.count}　　出售價格：${sellPrice}</div>
       `;
+      // <div class="item-desc">（已擁有）永久道具</div>
       div.addEventListener('click', ()=>{
         openSellConfirm('tool', name);
       });
@@ -1073,7 +1073,6 @@ function renderShop(){
       div.style.cursor = 'pointer';
       div.innerHTML = `
         <div class="item-name">${name}</div>
-        <div class="item-desc">（已擁有）消耗品</div>
         <div class="item-meta">數量：${obj.count}　　出售價格：${sellPrice}</div>
       `;
       div.addEventListener('click', ()=>{
