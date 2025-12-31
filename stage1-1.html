@@ -195,6 +195,9 @@ body{
   z-index:6;
   width:min(520px, 92vw);
 }
+#hud-left{ pointer-events:none; }
+#hud-left *{ pointer-events:none; } /* HUD 內目前沒有要點擊的元素，直接全關掉最乾淨 */
+
 
 #hud-toprow{
   display:flex;
@@ -250,11 +253,19 @@ body{
 
 /* ===== 星球名稱（小關） ===== */
 #level-name{
-  margin-top:10px;
+  position:absolute;
+  top:90px;                 /* 大約在左上 HUD 區下方，之後你想再微調 */
+  left:50%;
+  transform:translateX(-50%);
+  width:92vw;
+  text-align:center;
+
   font-size:1.7em;
   font-weight:800;
   color:#00ffcc;
   text-shadow:0 2px 10px rgba(0,0,0,0.45);
+  z-index:6;
+  pointer-events:none;
 }
 
 /* ===== 中央星球圖片 ===== */
@@ -262,7 +273,7 @@ body{
   position:absolute;
   left:50%;
   top:48%;
-  transform:translate(-50%,-50%);
+  transform:translate(-50%,-50%) scale(0.8);;
   width:min(70vw, 440px);
   height:auto;
   object-fit:contain;
@@ -483,9 +494,8 @@ body{
         <div id="hp-text">HP: 0/0</div>
       </div>
     </div>
-
-    <div id="level-name">（星球名稱）</div>
   </div>
+  <div id="level-name">（星球名稱）</div>
 
   <!-- ===== 畫面中央星球圖 ===== -->
   <img id="planet-image" src="" alt="planet">
@@ -751,7 +761,7 @@ function openShop(){
   isShopOpen = true;
   shopOverlay.classList.add('show');
   setGamePaused(true);
-  renderShop();
+  ensureShopOffers();
 }
 
 function closeShop(){
@@ -1576,6 +1586,9 @@ function boot(){
   const state = loadProgress();
   if(state){
     applyProgress(state);
+    if(shopTools.length === 0 && shopConsumables.length === 0){
+      generateShopOffers();
+    }
     // 若本頁是新一關的開始，你可以在這裡做必要的重置（例如：若手牌是空的就補到 HAND_SIZE）
     if(hand.length === 0){
       // 確保牌庫存在，沒有就重置
