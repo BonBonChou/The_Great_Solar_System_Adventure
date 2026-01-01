@@ -721,6 +721,7 @@ body{
       <div class="hud-chip" id="hud-stage-text">第一大關</div>
       <div class="hud-chip">燃料：<span id="hud-fuel">0</span>/<span id="hud-target">0</span></div>
       <div class="hud-chip">棄牌：<span id="hud-discards">0</span></div>
+      <div class="hud-row">牌庫：<span id="hud-deck">0</span></div>
     </div>
 
     <div id="hp-wrap">
@@ -931,6 +932,7 @@ const btnDiscard = document.getElementById('btn-discard');
 
 const hudStageText = document.getElementById('hud-stage-text');
 const hudFuel = document.getElementById('hud-fuel');
+const hudDeck = document.getElementById('hud-deck');
 const hudTarget = document.getElementById('hud-target');
 const hudDiscards = document.getElementById('hud-discards');
 const hpFill = document.getElementById('hp-fill');
@@ -998,6 +1000,7 @@ let tempEffects = {
   freeSupplyUses: 0,                    // 消耗品/道具：額外一次補給（不計入扣血頻率）
 
   nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
+  nextRefillMinus: 0,                   // ✅ 因為超上限抽牌，下次補給補牌數 -1（一次性）
   supplyHpOverride: null,               // 例如 { per:4 }：本關扣血頻率改 4
 };
 
@@ -1124,7 +1127,7 @@ const TOOL_DATA = [
   { name:"人頭牌 +5 燃料", price:[18], max:1 },
   { name:"每關首次補給 +30% 燃料", price:[28], max:1 },
   { name:"一關內每次補給，額外 +3 燃料", price:[22], max:1 },
-  { name:"補給 +20 燃料，每次通關後再永久 +2 燃料", price:[40], max:1 },
+  { name:"補給 +20 燃料，每次通關後再永久 +2 燃料", price:[40], max:1, sellable:false },
   { name:"每棄1張牌，下次補給獲得燃料 +5%", price:[26], max:1 },
   { name:"若補給只含人頭牌，+20% 燃料", price:[24], max:1 },
   { name:"高牌的下次補給 +50% 燃料", price:[20], max:1 },
@@ -1148,7 +1151,7 @@ const TOOL_DATA = [
   { name:"通關時若 HP ≤ 2，回復至 3", price:[20], max:1 },
   { name:"每關每使用一種新牌型，回復 1 HP", price:[36], max:1 },
   { name:"每關首次補給順子以上牌型，回復 1 HP", price:[22], max:1 },
-  { name:"最大 HP +1", price:[34], max:1, sellable:false },
+  { name:"最大 HP +1", price:[15,18,21,24], max:4, sellable:false },
   { name:"每通過一大關，最大 HP +1", price:[30], max:1 },
   { name:"每關免疫第一次傷害", price:[28], max:1 },
   { name:"使用鐵支/同花順/皇家同花順時，額外獲得一次補給", price:[36], max:1 },
@@ -1167,7 +1170,7 @@ const TOOL_DATA = [
 ];
 
 const CONSUMABLE_DATA = [
-  { name:"扣血頻率改為4次補給，持續一關", price:18 },
+  { name:"扣血頻率改為4次補給，持續一關", price:18, sellable:false },
   { name:"立即回復 2 HP", price:14, sellable:false },
   { name:"在【極端低溫】星球的下一次補給 +30% 燃料", price:12 },
   { name:"下一次補給使用的牌全部不移除", price:16 },
@@ -1235,6 +1238,17 @@ function ownedRemoveOne(map, name){
     map.set(name, obj);
   }
   return lastPaid; // 回傳這次售出的買入價
+}
+
+function hasConsumable(name){
+  const obj = ownedConsumables.get(name);
+  return !!obj && obj.count > 0;
+}
+
+// ✅ 消耗品生效時才「扣掉 1 個」：不給錢、不走出售流程
+function consumeConsumable(name){
+  // ownedRemoveOne 會把 count -1 並回傳 paid；這裡我們忽略 paid
+  return ownedRemoveOne(ownedConsumables, name) != null;
 }
 
 function sellPriceFromPaid(paidPrice){
@@ -1513,34 +1527,18 @@ function buyConsumable(item){
   }
   coins -= item.price;
 
-  // 立刻生效型消耗品
-  if(item.name === "下一次補給使用的牌全部不移除"){
-    tempEffects.nextSupplyNoRemove = true;
-    showToastText('已套用：下一次補給牌不移除', 1000);
-
-  }else if(item.name === "獲得額外一次補給"){
-    tempEffects.freeSupplyUses += 1;
-    showToastText('已獲得：額外一次補給', 1000);
-
-  }else if(item.name === "下一次補給的牌型等級 +1"){
-    tempEffects.nextSupplyHandRankPlus1 += 1;
-    showToastText('已套用：下一次牌型等級 +1', 1000);
-
-  }else if(item.name === "扣血頻率改為4次補給，持續一關"){
-    tempEffects.supplyHpOverride = { per:4 };
-    showToastText('已套用：本關扣血頻率=4', 1000);
-
-  }else if(item.name === "立即回復 2 HP"){
+  // ✅ 只有這兩個：買了立刻生效（且本來就不可售出）
+  if(item.name === "立即回復 2 HP"){
     hp = Math.min(maxHP, hp + 2);
     updateHUD();
     showToastText('回復 +2 HP', 900);
 
-  }else if(item.name === "下一次補給若為高牌/一對/兩對， +25 燃料"){
-    tempEffects.nextSupplyLowHandBonus = 25;
-    showToastText('已套用：下一次低牌型 +25 燃料', 1100);
+  }else if(item.name === "立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫"){
+    showToastText('請從兩張牌中選一張', 900);
+    useConsumable_Draw2Pick1();
 
   }else{
-    // 其他：先照原本設計入庫
+    // ✅ 其他全部：只入庫（是否生效由 owned 判斷）
     ownedAdd(ownedConsumables, item.name, item.price);
     showToastText('購買成功', 700);
   }
@@ -1652,6 +1650,8 @@ function updateHUD(){
   hudFuel.textContent = fuel;
   hudTarget.textContent = targetFuel;
   hudDiscards.textContent = discardsLeft;
+
+  if(hudDeck) hudDeck.textContent = drawPile?.length ?? 0;
 
   // 血條
   const ratio = maxHP > 0 ? (hp / maxHP) : 0;
@@ -1808,6 +1808,170 @@ function resolveSupply(outCards, stageCountForThisSupply){
 
   return { type, fuelGain, hpDelta, cardCount, extraDiscards };
 }
+
+function armConsumablesBeforeSupply(){
+  // 1) 下一次補給：全部不移除（一次性）
+  if(!tempEffects.nextSupplyNoRemove && hasConsumable("下一次補給使用的牌全部不移除")){
+    tempEffects.nextSupplyNoRemove = true;
+    consumeConsumable("下一次補給使用的牌全部不移除");
+  }
+
+  // 2) 下一次補給：牌型等級 +1（一次性）
+  if(tempEffects.nextSupplyHandRankPlus1 <= 0 && hasConsumable("下一次補給的牌型等級 +1")){
+    tempEffects.nextSupplyHandRankPlus1 = 1;
+    consumeConsumable("下一次補給的牌型等級 +1");
+  }
+
+  // 3) 下一次補給：低牌型 +25（一次性）
+  if(tempEffects.nextSupplyLowHandBonus <= 0 && hasConsumable("下一次補給若為高牌/一對/兩對， +25 燃料")){
+    tempEffects.nextSupplyLowHandBonus = 25;
+    consumeConsumable("下一次補給若為高牌/一對/兩對， +25 燃料");
+  }
+
+  // 4) 額外一次補給（一次性，轉成 freeSupplyUses）
+  if(tempEffects.freeSupplyUses <= 0 && hasConsumable("獲得額外一次補給")){
+    tempEffects.freeSupplyUses += 1;
+    consumeConsumable("獲得額外一次補給");
+  }
+
+  // 5) 極端低溫：下一次補給 +30%（一次性）
+  // ⚠️ 你目前 LEVELS 沒有星球特性欄位，所以先做一個 hook，之後你補規則再改判斷
+  if(hasConsumable("在【極端低溫】星球的下一次補給 +30% 燃料") && isExtremeColdCurrentLevel()){
+    // 用你現成的倍率欄位（與高牌+50%共存）
+    tempEffects.nextSupplyFuelMult = Math.max(tempEffects.nextSupplyFuelMult, 1.3);
+    consumeConsumable("在【極端低溫】星球的下一次補給 +30% 燃料");
+  }
+}
+
+// 先做簡單 hook：之後你要改成看 LEVELS 的 tag/trait
+function isExtremeColdCurrentLevel(){
+  // TODO: 你之後補規則再改這裡
+  return false;
+}
+
+/* =========================================================
+   消耗品：抽2選1加入手牌（另一張回牌庫）
+========================================================= */
+let pickOverlayEl = null;
+
+function openPick2Overlay(twoCards, onPick){
+  // 先關商店回遊戲
+  if(isShopOpen) closeShop();
+
+  // 暫停遊戲操作（避免玩家同時點牌/補給）
+  setGamePaused(true);
+
+  // 建 overlay（用 JS 動態塞，不用你改 HTML）
+  pickOverlayEl = document.createElement('div');
+  pickOverlayEl.id = 'pick2-overlay';
+  pickOverlayEl.style.cssText = `
+    position:fixed; inset:0; z-index:9999;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.65);
+  `;
+
+  pickOverlayEl.innerHTML = `
+    <div style="
+      width:min(560px, 92vw);
+      background:rgba(10,12,16,0.96);
+      border:1px solid rgba(255,255,255,0.12);
+      border-radius:16px;
+      padding:18px;
+      box-shadow:0 12px 40px rgba(0,0,0,0.55);
+      text-align:center;
+    ">
+      <div style="font-size:18px; font-weight:800; margin-bottom:14px;">
+        請選擇一張
+      </div>
+
+      <div style="display:flex; gap:14px; justify-content:center;">
+        ${twoCards.map((c, idx)=>`
+          <div class="pick-card" data-idx="${idx}" style="
+            width:160px; max-width:38vw;
+            border-radius:12px;
+            border:1px solid rgba(255,255,255,0.12);
+            background:rgba(255,255,255,0.03);
+            padding:10px;
+            cursor:pointer;
+            transition:transform .12s ease;
+          ">
+            <img src="${CARD_IMAGE_PATH + c.img}" style="width:100%; display:block; border-radius:10px;">
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="opacity:0.75; margin-top:12px; font-size:12px;">
+        選中後：該牌加入手牌，另一張回牌庫
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(pickOverlayEl);
+
+  // hover 效果
+  pickOverlayEl.querySelectorAll('.pick-card').forEach(el=>{
+    el.addEventListener('mouseenter', ()=> el.style.transform = 'translateY(-2px)');
+    el.addEventListener('mouseleave', ()=> el.style.transform = 'translateY(0)');
+  });
+
+  // 點擊選擇
+  pickOverlayEl.addEventListener('click', (e)=>{
+    const cardEl = e.target.closest('.pick-card');
+    if(!cardEl) return;
+
+    const idx = Number(cardEl.dataset.idx);
+    onPick(idx);
+
+    // 關 overlay，恢復操作
+    pickOverlayEl.remove();
+    pickOverlayEl = null;
+
+    renderHand();
+    updateHUD();
+    setGamePaused(false);
+    saveProgress();
+  }, { once:true });
+}
+
+function useConsumable_Draw2Pick1(){
+  // 牌庫不足：能抽幾張就抽幾張，但少於2就直接提示（你也可改成不允許買）
+  if(!drawPile || drawPile.length === 0){
+    showToastText('牌庫沒有牌了', 1000);
+    return;
+  }
+
+  const take = Math.min(2, drawPile.length);
+  const picked = [];
+  for(let i=0;i<take;i++){
+    picked.push(drawPile.pop());
+  }
+
+  if(picked.length < 2){
+    // 抽不到 2 張：就把抽到的放回去
+    drawPile.push(...picked);
+    shuffle(drawPile);
+    showToastText('牌庫不足 2 張，無法使用', 1100);
+    return;
+  }
+
+  openPick2Overlay(picked, (idx)=>{
+    const chosen = picked[idx];
+    const other = picked[1 - idx];
+
+    // ✅ 被選中的加入手牌（允許超上限）
+    hand.push(chosen);
+
+    // ✅ 另一張回牌庫並洗
+    drawPile.push(other);
+    shuffle(drawPile);
+
+    // ✅ 下次補給補牌數 -1（因為這次手牌多 1）
+    tempEffects.nextRefillMinus = 1;
+
+    showToastText('已加入手牌（下次補牌 -1）', 1200);
+  });
+}
+
 
 /* =========================================================
    抽牌 / 發牌 / UI render
@@ -2040,6 +2204,7 @@ function startLevel(){
     freeSupplyUses: 0,                    // 消耗品/道具：額外一次補給（不計入扣血頻率）
 
     nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
+    nextRefillMinus: 0,                   // ✅ 因為超上限抽牌，下次補給補牌數 -1（一次性）
     supplyHpOverride: null,
   };
 
@@ -2171,6 +2336,7 @@ function restartCurrentLevel(){
     freeSupplyUses: 0,                    // 消耗品/道具：額外一次補給（不計入扣血頻率）
 
     nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
+    nextRefillMinus: 0,                   // ✅ 因為超上限抽牌，下次補給補牌數 -1（一次性）
     supplyHpOverride: null,
   };
 
@@ -2218,7 +2384,7 @@ function restartWholeGame(){
   usedHandTypesInLevel.clear();
   immuneHitUsedInLevel = false;
   tempEffects = {
-    nnextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
+    nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
     nextSupplyHandRankPlus1: 0,           // 消耗品：下一次牌型等級 +1（一次性）
 
     nextSupplyFuelPctFromDiscard: 0,      // 道具：每棄1張牌，下次補給 +5%（累積到下一次補給後清空）
@@ -2227,6 +2393,7 @@ function restartWholeGame(){
     freeSupplyUses: 0,                    // 消耗品/道具：額外一次補給（不計入扣血頻率）
 
     nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
+    nextRefillMinus: 0,                   // ✅ 因為超上限抽牌，下次補給補牌數 -1（一次性）
     supplyHpOverride: null,
   };
 
@@ -2289,6 +2456,8 @@ btnPlay.addEventListener('click', ()=>{
     return;
   }
 
+  armConsumablesBeforeSupply();
+
   const outCards = removeCardsFromHandByIds(ids);
 
   // ✅ 本次是否 freeSupply（不增加扣血頻率計數）
@@ -2327,8 +2496,13 @@ btnPlay.addEventListener('click', ()=>{
     played.push(...outCards);
   }
 
-  // ✅ 補牌
-  drawFromPile(outCards.length);
+  // ✅ 補牌（若有「超上限抽牌」效果 → 下次補牌少 1）
+  const refillMinus = tempEffects.nextRefillMinus || 0;
+  const refillCount = Math.max(0, outCards.length - refillMinus);
+  drawFromPile(refillCount);
+  // 一次性：用完清掉
+  if(refillMinus > 0) tempEffects.nextRefillMinus = 0;
+
 
   // ✅ 大關補給次數（freeSupply 不增加）
   if(isFreeSupply){
@@ -2638,6 +2812,7 @@ function applyProgress(state){
       nextSupplyFuelMult: state.tempEffects.nextSupplyFuelMult ?? 1,
       freeSupplyUses: state.tempEffects.freeSupplyUses ?? 0,
       nextSupplyLowHandBonus: state.tempEffects.nextSupplyLowHandBonus ?? 0,
+      nextRefillMinus: state.tempEffects.nextRefillMinus ?? 0,
       supplyHpOverride: state.tempEffects.supplyHpOverride ?? null,
     };
   }
