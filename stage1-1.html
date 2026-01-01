@@ -863,6 +863,74 @@ body{
 
 <script>
 /* =========================================================
+   測試用：強制商店一定刷到某些商品
+   - tools: 會被塞進 shopTools（道具 8 格）
+   - consumables: 會被塞進 shopConsumables（消耗品 2 格）
+   - enabled=false 時完全不影響正常抽樣
+========================================================= */
+const TEST_FORCE_SHOP = {
+  enabled: true, // 要正常抽就改 false
+  tools: [
+    "增加1棄牌次數",
+    // "手牌上限+1張",
+  ],
+  consumables: [
+    "立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫",
+  ],
+};
+function findToolByName(name){
+  return TOOL_DATA.find(t => t.name === name) || null;
+}
+function findConsumableByName(name){
+  return CONSUMABLE_DATA.find(c => c.name === name) || null;
+}
+function forceInjectShopOffers(){
+  if(!TEST_FORCE_SHOP?.enabled) return;
+
+  // ===== 道具：強制塞進 8 格 =====
+  if(Array.isArray(TEST_FORCE_SHOP.tools) && TEST_FORCE_SHOP.tools.length){
+    TEST_FORCE_SHOP.tools.forEach(name=>{
+      const def = findToolByName(name);
+      if(!def) return;
+
+      // 已售罄就不塞（避免測試時卡住）
+      if(isToolSoldOut(def)) return;
+
+      // 已在貨架上就跳過
+      if(shopTools.some(t => t.name === def.name)) return;
+
+      // 塞進去：放最前面（你要放最後也可以改 push）
+      shopTools.unshift(def);
+
+      // 超過 8 格就砍掉最後一個（避免砍到剛塞的）
+      if(shopTools.length > 8) shopTools.pop();
+    });
+
+    // 仍確保固定道具在最後（沿用你原本規則）
+    const nonFixedPart = shopTools.filter(t=>!t.fixed);
+    const fixedPart = shopTools.filter(t=>t.fixed);
+    shopTools = [...nonFixedPart, ...fixedPart].slice(0,8);
+  }
+
+  // ===== 消耗品：強制塞進 2 格 =====
+  if(Array.isArray(TEST_FORCE_SHOP.consumables) && TEST_FORCE_SHOP.consumables.length){
+    TEST_FORCE_SHOP.consumables.forEach(name=>{
+      const def = findConsumableByName(name);
+      if(!def) return;
+
+      // 已在貨架上就跳過
+      if(shopConsumables.some(c => c.name === def.name)) return;
+
+      // 塞進去：放最前面
+      shopConsumables.unshift(def);
+
+      // 超過 2 格就砍掉最後一個
+      if(shopConsumables.length > 2) shopConsumables.pop();
+    });
+  }
+}
+
+/* =========================================================
    規格可調區
 ========================================================= */
 let HAND_SIZE = 8;                 // 可由道具升到 11（你之後改這裡即可）
@@ -1290,6 +1358,9 @@ function generateShopOffers(){
 
   // 消耗品：抽 2 個
   shopConsumables = pickRandom(CONSUMABLE_DATA, 2);
+
+  // 測試用強制塞指定商品
+  forceInjectShopOffers();
 }
 
 /* ===== 渲染卡片（含購買按鈕） ===== */
@@ -1855,13 +1926,9 @@ function isExtremeColdCurrentLevel(){
 let pickOverlayEl = null;
 
 function openPick2Overlay(twoCards, onPick){
-  // 先關商店回遊戲
   if(isShopOpen) closeShop();
-
-  // 暫停遊戲操作（避免玩家同時點牌/補給）
   setGamePaused(true);
 
-  // 建 overlay（用 JS 動態塞，不用你改 HTML）
   pickOverlayEl = document.createElement('div');
   pickOverlayEl.id = 'pick2-overlay';
   pickOverlayEl.style.cssText = `
@@ -1908,21 +1975,22 @@ function openPick2Overlay(twoCards, onPick){
 
   document.body.appendChild(pickOverlayEl);
 
-  // hover 效果
   pickOverlayEl.querySelectorAll('.pick-card').forEach(el=>{
     el.addEventListener('mouseenter', ()=> el.style.transform = 'translateY(-2px)');
     el.addEventListener('mouseleave', ()=> el.style.transform = 'translateY(0)');
   });
 
-  // 點擊選擇
+  let done = false;
   pickOverlayEl.addEventListener('click', (e)=>{
-    const cardEl = e.target.closest('.pick-card');
-    if(!cardEl) return;
+    if(done) return;
 
+    const cardEl = e.target.closest('.pick-card');
+    if(!cardEl) return; // 點到黑背景就忽略，仍可繼續選
+
+    done = true;
     const idx = Number(cardEl.dataset.idx);
     onPick(idx);
 
-    // 關 overlay，恢復操作
     pickOverlayEl.remove();
     pickOverlayEl = null;
 
@@ -1930,7 +1998,7 @@ function openPick2Overlay(twoCards, onPick){
     updateHUD();
     setGamePaused(false);
     saveProgress();
-  }, { once:true });
+  });
 }
 
 function useConsumable_Draw2Pick1(){
