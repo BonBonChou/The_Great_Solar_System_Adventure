@@ -976,6 +976,18 @@ function computeMaxHP(){
   return base + bonus;
 }
 
+// ===== 本關內狀態（不存檔）=====
+let supplyCountInLevel = 0;          // 本關第幾次補給
+let usedHandTypesInLevel = new Set();// 本關已用過的牌型
+let immuneHitUsedInLevel = false;    // 是否已用掉「免疫第一次傷害」
+
+// 消耗品 / 暫時效果
+let tempEffects = {
+  nextSupplyNoRemove: false,
+  nextSupplyHandRankPlus1: 0,
+  supplyHpOverride: null,   // 例如 { per:4 } 代表 4 次補給扣 1 HP
+};
+
 /* =========================================================
    排序（你指定：點數優先，花色 S→H→D→C）
 ========================================================= */
@@ -1554,6 +1566,88 @@ function computePassCoins(baseCoins){
   return Math.floor(coins);
 }
 
+function resolveSupply(outCards){
+  const base = evaluateHand(outCards);
+
+  let fuelGain = base.fuelGain;
+  let type = base.type;
+  const cardCount = outCards.length;
+
+  supplyCountInLevel += 1;
+  usedHandTypesInLevel.add(type);
+
+  const isFaceOnly = outCards.every(c => ['J','Q','K','A'].includes(c.rank));
+
+  /* ===== 燃料修正（道具）===== */
+
+  // 人頭牌 +5
+  if(ownedTools.has("人頭牌 +5 燃料")){
+    const faceCount = outCards.filter(c => ['J','Q','K','A'].includes(c.rank)).length;
+    fuelGain += faceCount * 5;
+  }
+
+  // 每關首次補給 +30%
+  if(
+    ownedTools.has("每關首次補給 +30% 燃料") &&
+    supplyCountInLevel === 1
+  ){
+    fuelGain *= 1.3;
+  }
+
+  // 一關內每次補給 +3
+  if(ownedTools.has("一關內每次補給，額外 +3 燃料")){
+    fuelGain += supplyCountInLevel * 3;
+  }
+
+  // 只含人頭牌 +20%
+  if(
+    ownedTools.has("若補給只含人頭牌，+20% 燃料") &&
+    isFaceOnly
+  ){
+    fuelGain *= 1.2;
+  }
+
+  // 3 張以上 +20%
+  if(
+    ownedTools.has("若補給包含3張牌以上，+20% 燃料") &&
+    cardCount >= 3
+  ){
+    fuelGain *= 1.2;
+  }
+
+  // 一關內每使用一種牌型 +6
+  if(ownedTools.has("一關內每使用過一種牌型 +6 燃料")){
+    fuelGain += usedHandTypesInLevel.size * 6;
+  }
+
+  fuelGain = Math.floor(fuelGain);
+
+  /* ===== HP 結算 ===== */
+  let hpDelta = 0;
+  const hpRule = tempEffects.supplyHpOverride?.per
+    ?? SUPPLY_PER_HP_BY_STAGE[bigStage]
+    ?? 3;
+
+  if(supplyCountInStage % hpRule === 0){
+    if(
+      ownedTools.has("每關免疫第一次傷害") &&
+      !immuneHitUsedInLevel
+    ){
+      immuneHitUsedInLevel = true;
+    }else{
+      hpDelta = -1;
+    }
+  }
+
+  return {
+    type,
+    fuelGain,
+    hpDelta,
+    cardCount,
+  };
+}
+
+
 /* =========================================================
    抽牌 / 發牌 / UI render
 ========================================================= */
@@ -1673,11 +1767,18 @@ function startLevel(){
 
   bigStage = info.stage;
   targetFuel = info.targetFuel;
-
-  // maxHP / hp（如果你希望「進入新大關時 hp = maxHP」也可調）
   maxHP = computeMaxHP();
   hp = Math.min(hp, maxHP);
-  if(hp <= maxHP) hp = maxHP; // 若你想新開局就滿血；不想就刪這行
+  if(hp <= maxHP) hp = maxHP;
+  supplyCountInLevel = 0;
+  usedHandTypesInLevel.clear();
+  immuneHitUsedInLevel = false;
+  tempEffects = {
+    nextSupplyNoRemove: false,
+    nextSupplyHandRankPlus1: 0,
+    supplyHpOverride: null,
+  };
+
 
   // 每關重置棄牌次數
   discardsLeft = DISCARD_PER_LEVEL;
@@ -1734,7 +1835,7 @@ function passLevel(){
 passContinue.addEventListener('click', ()=>{
   const info = LEVELS[levelIndex] || LEVELS[0];
   const gainCoins = computePassCoins(info.passCoins);
-  
+
   // 1) 發通關金幣
   coins += gainCoins;
 
@@ -1792,13 +1893,19 @@ function restartCurrentLevel(){
   // 關卡基本數值重置
   const info = LEVELS[levelIndex] || LEVELS[0];
   bigStage = info.stage;
-
   fuel = 0;
   targetFuel = info.targetFuel;
-
-  // ✅ HP 回到本關 maxHP
   maxHP = computeMaxHP();
   hp = maxHP;
+  supplyCountInLevel = 0;
+  usedHandTypesInLevel.clear();
+  immuneHitUsedInLevel = false;
+  tempEffects = {
+    nextSupplyNoRemove: false,
+    nextSupplyHandRankPlus1: 0,
+    supplyHpOverride: null,
+  };
+
 
   // 棄牌、補給計數
   discardsLeft = DISCARD_PER_LEVEL;
@@ -1840,6 +1947,15 @@ function restartWholeGame(){
 
   ownedTools.clear();
   ownedConsumables.clear();
+
+  supplyCountInLevel = 0;
+  usedHandTypesInLevel.clear();
+  immuneHitUsedInLevel = false;
+  tempEffects = {
+    nextSupplyNoRemove: false,
+    nextSupplyHandRankPlus1: 0,
+    supplyHpOverride: null,
+  };
 
   // 4) 重置商店（新局就刷新一次）
   shopTools = [];
@@ -1906,18 +2022,17 @@ btnPlay.addEventListener('click', ()=>{
   // 2) 放進已出牌堆（不回牌庫）
   played.push(...outCards);
 
-  // 3) 依牌型加燃料
-  const result = evaluateHand(outCards);
+  // 3) 補給結算
+  const result = resolveSupply(outCards);
   fuel += result.fuelGain;
 
   // 4) 補牌：出幾張補幾張
   drawFromPile(outCards.length);
 
-  // 5) 補給次數計數 → 依大關扣 HP
+  // 5) 補給次數計數 → 扣 HP
   supplyCountInStage += 1;
-  const perHP = SUPPLY_PER_HP_BY_STAGE[bigStage] ?? 3;
-  if(supplyCountInStage % perHP === 0){
-    hp -= 1;
+  if(result.hpDelta < 0){
+    hp += result.hpDelta;
     if(hp <= 0){
       hp = 0;
       renderHand();
