@@ -616,6 +616,91 @@ body{
   font-weight:800;
 }
 
+/* ===== 通關彈窗 ===== */
+#pass-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.45);
+  z-index:1001;             /* 比 confirm-overlay 高一點，避免互蓋 */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#pass-box{
+  width:min(86vw, 520px);
+  background:rgba(10,10,14,0.96);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:16px;
+  padding:16px 14px;
+  box-shadow:0 18px 60px rgba(0,0,0,0.65);
+}
+
+#pass-title{
+  font-size:1.35em;
+  font-weight:900;
+  color:#00ffcc;
+  margin-bottom:10px;
+}
+
+#pass-text{
+  font-size:1.1em;
+  line-height:1.6;
+  opacity:0.92;
+  margin-bottom:14px;
+}
+
+#pass-actions{
+  display:flex;
+  justify-content:flex-end;
+}
+#pass-actions .action-btn{
+  width:140px;
+}
+
+/* ===== 失敗彈窗 ===== */
+#fail-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.55);
+  z-index:1002; /* 高於通關/confirm */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#fail-box{
+  width:min(90vw, 560px);
+  background:rgba(10,10,14,0.96);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:16px;
+  padding:16px 14px;
+  box-shadow:0 18px 60px rgba(0,0,0,0.70);
+}
+
+#fail-title{
+  font-size:1.35em;
+  font-weight:900;
+  color:#ff8a8a;
+  margin-bottom:10px;
+}
+
+#fail-text{
+  font-size:1.1em;
+  line-height:1.6;
+  opacity:0.92;
+  margin-bottom:14px;
+}
+
+#fail-actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+#fail-actions .action-btn{
+  width:170px;
+}
 
 </style>
 </head>
@@ -745,6 +830,28 @@ body{
     </div>
   </div>
 
+  <!-- ===== 通關彈窗 ===== -->
+  <div id="pass-overlay" style="display:none;">
+    <div id="pass-box">
+      <div id="pass-title">通關！</div>
+      <div id="pass-text"></div>
+      <div id="pass-actions">
+        <button id="pass-continue" class="action-btn">繼續</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 失敗彈窗 ===== -->
+  <div id="fail-overlay" style="display:none;">
+    <div id="fail-box">
+      <div id="fail-title">失敗...</div>
+      <div id="fail-text">HP 歸零了。要怎麼做？</div>
+      <div id="fail-actions">
+        <button id="fail-retry" class="action-btn">本關重新開始</button>
+        <button id="fail-restart" class="action-btn discard">遊戲重頭開始</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -804,8 +911,6 @@ const LEVELS = [
   { stage:3, name:"冥王星", targetFuel:250, passCoins:60, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/pluto.png" },
 ];
 
-
-
 // 目前關卡指標（用 index 最好管理）
 let levelIndex = 0; // 0=水星，1=金星... 你之後可用存檔記住
 
@@ -849,19 +954,14 @@ SUITS.forEach(suit=>{
    遊戲狀態
 ========================================================= */
 let bigStage = 1;          // 大關：1~3（你規格）
-let level = 1;             // 小關（示範用）
 let hp = 3;
-
 let fuel = 0;
 let targetFuel = 0;
-
 let discardsLeft = DISCARD_PER_LEVEL;
 let supplyCountInStage = 0;  // 本大關補給次數累積，用來扣 HP
-
 let drawPile = [];  // 可抽牌庫（會變）
 let hand = [];      // 手牌（會變）
 let played = [];    // 已出牌（不回牌庫）
-
 let maxHP = 0;
 
 function computeMaxHP(){
@@ -1302,6 +1402,7 @@ confirmYes.addEventListener('click', ()=>{
 
   closeSellConfirm();
   renderShop();
+  saveProgress();
 });
 
 
@@ -1324,6 +1425,7 @@ function buyTool(tool){
 
   showToastText('購買成功', 700);
   renderShop();
+  saveProgress();
 }
 
 
@@ -1341,6 +1443,7 @@ function buyConsumable(item){
 
   showToastText('購買成功', 700);
   renderShop();
+  saveProgress();
 }
 
 /* 開商店時若還沒抽貨，就抽一次並渲染 */
@@ -1406,25 +1509,6 @@ function updateActionButtons(){
   btnDiscard.disabled = !hasSelected || discardsLeft <= 0;    // 沒選牌 / 沒棄牌次數 不能丟棄
 }
 
-function saveProgress(){
-  const data = {
-    bigStage,
-    level,
-    hp,
-    fuel,
-    targetFuel,
-    discardsLeft,
-    supplyCountInStage,
-    HAND_SIZE,
-
-    // 牌堆狀態（跨頁保持最穩）
-    drawPile,
-    hand,
-    played
-  };
-  localStorage.setItem('gameState', JSON.stringify(data));
-}
-
 function goToKnowledgePage(){
   saveProgress();
   location.href = 'knowledge_stage1_level1.html'; // ✅ 改成你該關的知識頁網址
@@ -1450,7 +1534,25 @@ function updateHUD(){
   planetImageEl.style.display = (planetImageEl.src ? "" : "none");
 }
 
+function computePassCoins(baseCoins){
+  let coins = baseCoins;
 
+  // ===== 通關金幣 +10% =====
+  if(ownedTools.has("通關金幣 +10%")){
+    coins *= 1.10;
+  }
+
+  // ===== 若本關未使用棄牌，通關金幣 +30% =====
+  if(
+    ownedTools.has("若本關未使用棄牌，通關金幣 +30%")
+    && discardsLeft === DISCARD_PER_LEVEL
+  ){
+    coins *= 1.30;
+  }
+
+  // 無條件捨去（你規格）
+  return Math.floor(coins);
+}
 
 /* =========================================================
    抽牌 / 發牌 / UI render
@@ -1564,10 +1666,9 @@ function evaluateHand(cards){
 }
 
 /* =========================================================
-   關卡流程（先做最小可玩）
+   關卡流程
 ========================================================= */
 function startLevel(){
-  refreshShopForNewLevel();
   const info = LEVELS[levelIndex];
 
   bigStage = info.stage;
@@ -1593,17 +1694,198 @@ function startLevel(){
   updateHUD();
 }
 
+/* ===== 通關彈窗 ===== */
+const passText = document.getElementById('pass-text');
+const passOverlay = document.getElementById('pass-overlay');
+const passContinue = document.getElementById('pass-continue');
 
-function passLevel(){
-  showToastText('通關！', 1000);
-  setTimeout(goToKnowledgePage, 600); // 讓提示先閃一下再跳
+let isPassOpen = false;
+
+function openPassModal(){
+  isPassOpen = true;
+  passOverlay.style.display = 'flex';
+
+  // 通關彈窗出現：暫停遊戲 + 避免商店/規則疊開
+  setGamePaused(true);
+  shopBtn.style.pointerEvents = 'none';
+  rulesBtn.style.pointerEvents = 'none';
 }
 
+function closePassModal(){
+  isPassOpen = false;
+  passOverlay.style.display = 'none';
 
-function gameOver(){
-  showToastText('HP 歸零，遊戲結束', 1300);
+  // 通常通關後你會直接跳頁，所以這裡不太會用到
+  shopBtn.style.pointerEvents = 'auto';
+  rulesBtn.style.pointerEvents = 'auto';
+}
+
+function passLevel(){
+  const info = LEVELS[levelIndex] || LEVELS[0];
+  const gainCoins = computePassCoins(info.passCoins);
+
+  passText.textContent =
+    `獲得 ${gainCoins} 金幣，按下「繼續」進入知識頁。`;
+
+  openPassModal();
+}
+
+/* 按「繼續」才真的做結算/存檔/跳知識頁 */
+passContinue.addEventListener('click', ()=>{
+  const info = LEVELS[levelIndex] || LEVELS[0];
+  const gainCoins = computePassCoins(info.passCoins);
+  
+  // 1) 發通關金幣
+  coins += gainCoins;
+
+  // 2) 通關才刷新商店
+  generateShopOffers();
+
+  // 3) 存檔（讓知識頁回來時資料都在）
+  saveProgress();
+
+  // 4) 跳知識頁（知識頁用 levelIndex 決定內容）
+  goToKnowledgePage();
+});
+
+
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && isPassOpen){
+    // 通關彈窗通常不給關掉，避免玩家卡關；所以這裡不做 close
+    // 如果你想允許關閉，就改成 closePassModal();
+    e.preventDefault();
+  }
+});
+
+/* ===== 失敗彈窗 ===== */
+const failOverlay = document.getElementById('fail-overlay');
+const failRetry = document.getElementById('fail-retry');
+const failRestart = document.getElementById('fail-restart');
+
+let isFailOpen = false;
+
+function openFailModal(){
+  isFailOpen = true;
+  failOverlay.style.display = 'flex';
+
+  // 暫停遊戲 + 禁止其它 icon 疊開
+  setGamePaused(true);
+  shopBtn.style.pointerEvents = 'none';
+  rulesBtn.style.pointerEvents = 'none';
+}
+
+function closeFailModal(){
+  isFailOpen = false;
+  failOverlay.style.display = 'none';
+
+  shopBtn.style.pointerEvents = 'auto';
+  rulesBtn.style.pointerEvents = 'auto';
+
+  // 關掉失敗窗後通常會直接重開或重頭開始，
+  // 若你未來想允許關掉不重開，再決定是否恢復 setGamePaused(false)
+}
+
+/* ===== 本關重新開始（不動 levelIndex，不動已擁有/金幣/商店貨架） ===== */
+function restartCurrentLevel(){
+  closeFailModal();
+
+  // 關卡基本數值重置
+  const info = LEVELS[levelIndex] || LEVELS[0];
+  bigStage = info.stage;
+
+  fuel = 0;
+  targetFuel = info.targetFuel;
+
+  // ✅ HP 回到本關 maxHP
+  maxHP = computeMaxHP();
+  hp = maxHP;
+
+  // 棄牌、補給計數
+  discardsLeft = DISCARD_PER_LEVEL;
+  supplyCountInStage = 0;
+
+  // 手牌上限 HAND_SIZE：你目前是「永久道具」會改它，所以重開別動 HAND_SIZE
+  // HAND_SIZE 不重置
+
+  // ✅ 牌庫：依你目前實作（每關都重置 deck）就重置
+  // 若你之後改成「同大關內不重置」，只要改這裡即可
+  initBigStageResetDeck();
+
+  // 發牌
+  hand = [];
+  drawFromPile(Math.min(HAND_SIZE, HAND_SIZE_MAX));
   renderHand();
   updateHUD();
+
+  // 讓按鈕恢復可按
+  setGamePaused(false);
+}
+
+/* ===== 遊戲重頭開始（清存檔 + 回到初始狀態） ===== */
+function restartWholeGame(){
+  // 1) 清存檔
+  localStorage.removeItem('gameState');
+
+  // 2) 重置進度
+  levelIndex = 0;
+  const info = LEVELS[levelIndex];
+
+  bigStage = info.stage;
+  fuel = 0;
+  targetFuel = info.targetFuel;
+
+  // 3) 重置資源與永久狀態（你可按需求調整）
+  coins = 10;
+  HAND_SIZE = 8;
+
+  ownedTools.clear();
+  ownedConsumables.clear();
+
+  // 4) 重置商店（新局就刷新一次）
+  shopTools = [];
+  shopConsumables = [];
+  generateShopOffers();
+
+  // 5) 重置關卡數值
+  maxHP = computeMaxHP();
+  hp = maxHP;
+  discardsLeft = DISCARD_PER_LEVEL;
+  supplyCountInStage = 0;
+
+  initBigStageResetDeck();
+
+  hand = [];
+  drawFromPile(Math.min(HAND_SIZE, HAND_SIZE_MAX));
+
+  // 6) UI
+  closeFailModal();
+  closeShop();            // 避免商店還開著
+  closeRules();           // 避免規則還開著
+  renderHand();
+  updateHUD();
+
+  // 7) 存一次（可選，但我建議存，避免玩家重整又回舊狀態）
+  saveProgress();
+
+  // 8) 繼續玩
+  setGamePaused(false);
+}
+
+failRetry.addEventListener('click', restartCurrentLevel);
+failRestart.addEventListener('click', restartWholeGame);
+
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && isFailOpen){
+    // 失敗窗不允許 ESC 關閉，避免玩家卡在失敗狀態
+    e.preventDefault();
+  }
+});
+
+function gameOver(){
+  hp = 0;
+  renderHand();
+  updateHUD();
+  openFailModal();
 }
 
 /* =========================================================
@@ -1919,7 +2201,7 @@ function applyProgress(state){
   if(state.ownedConsumables) ownedConsumablesFromState(state.ownedConsumables);
 
   // 最後：確保 HUD 用的門檻/大關一致
-  targetFuel = info.targetFuel; // 若你希望永遠以表為準就留這行；若以存檔為準就刪掉這行
+  // targetFuel = info.targetFuel; // 若你希望永遠以表為準就留這行；若以存檔為準就刪掉這行
 }
 
 function ownedToolsFromState(obj){
@@ -1928,11 +2210,59 @@ function ownedToolsFromState(obj){
     ownedTools.set(name, { count: data.count, paid: data.paid || [] });
   });
 }
+
 function ownedConsumablesFromState(obj){
   ownedConsumables.clear();
   Object.entries(obj).forEach(([name, data])=>{
     ownedConsumables.set(name, { count: data.count, paid: data.paid || [] });
   });
+}
+
+function ownedToolsToState(){
+  const out = {};
+  ownedTools.forEach((v, k)=>{
+    out[k] = { count: v.count || 0, paid: Array.isArray(v.paid) ? v.paid : [] };
+  });
+  return out;
+}
+
+function ownedConsumablesToState(){
+  const out = {};
+  ownedConsumables.forEach((v, k)=>{
+    out[k] = { count: v.count || 0, paid: Array.isArray(v.paid) ? v.paid : [] };
+  });
+  return out;
+}
+
+function saveProgress(){
+  const data = {
+    // 關卡定位
+    levelIndex,
+    bigStage,
+
+    // 核心數值
+    hp,
+    maxHP,
+    fuel,
+    targetFuel,
+    discardsLeft,
+    supplyCountInStage,
+    HAND_SIZE,
+
+    // 牌堆
+    drawPile,
+    hand,
+    played,
+
+    // 商店 / 經濟
+    coins,
+    shopTools,
+    shopConsumables,
+    ownedTools: ownedToolsToState(),
+    ownedConsumables: ownedConsumablesToState(),
+  };
+
+  localStorage.setItem('gameState', JSON.stringify(data));
 }
 
 function boot(){
