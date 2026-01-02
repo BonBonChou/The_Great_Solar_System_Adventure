@@ -162,19 +162,33 @@ body{
 #hud-left{
   position:absolute;
   top:10px;
-  left:10px;
+  left:12px;
+  right:12px;          /* ✅ 關鍵：不用 width:min(...)，改用左右貼齊 */
+  width:auto;
   z-index:6;
-  width:min(520px, 92vw);
+  pointer-events:none;
 }
-#hud-left{ pointer-events:none; }
-#hud-left *{ pointer-events:none; } /* HUD 內目前沒有要點擊的元素，直接全關掉最乾淨 */
+#hud-left *{ pointer-events:none; }
 
-
+/* ===== 上排 4 格平均分配，窄螢幕自動變兩行 ===== */
 #hud-toprow{
-  display:flex;
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)); /* ✅ 4 格平均 */
   gap:10px;
   align-items:center;
-  flex-wrap:wrap;
+}
+
+/* 每格吃滿自己的格子 */
+#hud-toprow .hud-chip{
+  width:100%;
+  box-sizing:border-box;
+}
+
+/* 窄螢幕：改成 2 欄 → 兩行（仍然平均） */
+@media (max-width: 520px){
+  #hud-toprow{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .hud-chip{
@@ -194,6 +208,7 @@ body{
 #hp-bar{
   position:relative;
   height:22px;
+  width:100%;
   border-radius:999px;
   background:rgba(255,255,255,0.10);
   border:1px solid rgba(255,255,255,0.14);
@@ -222,10 +237,14 @@ body{
   pointer-events:none;
 }
 
+:root{
+  --hud-bottom: 120px;     /* fallback */
+  --hud-gap: 14px;         /* HUD 與下一層的間距 */
+}
 /* ===== 星球名稱（小關） ===== */
 #level-name{
   position:absolute;
-  top:90px;                 /* 大約在左上 HUD 區下方，之後你想再微調 */
+  top: calc(var(--hud-bottom) + var(--hud-gap));
   left:50%;
   transform:translateX(-50%);
   width:92vw;
@@ -256,7 +275,7 @@ body{
 /* ===== 商店圖標 ===== */
 #shop-btn{
   position:absolute;
-  top:164px;               /* shop-btn 是 100px + 56px + 8px ≈ 164px，想更近可調小 */
+  top: calc(var(--hud-bottom) + var(--hud-gap) + 64px); /* 原本 100→164 差 64 */
   right:12px;
   width:56px;
   height:56px;
@@ -479,7 +498,7 @@ body{
 /* ===== 規則圖標（放在商店下面） ===== */
 #rules-btn{
   position:absolute;
-  top:100px;
+  top: calc(var(--hud-bottom) + var(--hud-gap));
   right:12px;
   width:56px;
   height:56px;
@@ -1734,6 +1753,8 @@ function updateHUD(){
   levelNameEl.textContent = info?.name ?? "（未知星球）";
   planetImageEl.src = info?.image || ""; // 你填了網址就會顯示
   planetImageEl.style.display = (planetImageEl.src ? "" : "none");
+
+  updateTopUILayout();
 }
 
 function computePassCoins(baseCoins){
@@ -1939,13 +1960,15 @@ function openPick2Overlay(twoCards, onPick){
 
   pickOverlayEl.innerHTML = `
     <div style="
-      width:min(560px, 92vw);
-      background:rgba(10,12,16,0.96);
-      border:1px solid rgba(255,255,255,0.12);
-      border-radius:16px;
-      padding:18px;
-      box-shadow:0 12px 40px rgba(0,0,0,0.55);
-      text-align:center;
+      width: min(80vw, 860px);
+      max-height: 80vh;
+      background: rgba(10,12,16,0.96);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 22px 18px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+      text-align: center;
+      overflow: auto;
     ">
       <div style="font-size:18px; font-weight:800; margin-bottom:14px;">
         請選擇一張
@@ -2289,6 +2312,7 @@ function startLevel(){
   renderHand();
 
   updateHUD();
+  updateTopUILayout();
 }
 
 /* ===== 通關彈窗 ===== */
@@ -2948,6 +2972,26 @@ function saveProgress(){
   localStorage.setItem('gameState', JSON.stringify(data));
 }
 
+function updateTopUILayout(){
+  const hud = document.getElementById('hud-left');
+  if(!hud) return;
+
+  const rect = hud.getBoundingClientRect();
+  // 以視窗座標算 HUD 底部，轉成「距離畫面頂部的 px」
+  const bottom = Math.round(rect.bottom);
+
+  document.documentElement.style.setProperty('--hud-bottom', `${bottom}px`);
+}
+
+// 初次、resize、以及可能變動時呼叫
+window.addEventListener('resize', updateTopUILayout);
+
+// 如果你的 HUD 內容會因為文字/數值變長而換行，建議也監聽它
+const hudLeftEl = document.getElementById('hud-left');
+if(hudLeftEl && 'ResizeObserver' in window){
+  new ResizeObserver(updateTopUILayout).observe(hudLeftEl);
+}
+
 function boot(){
   const state = loadProgress();
   if(state){
@@ -2974,6 +3018,7 @@ function boot(){
 }
 
 boot();
+updateTopUILayout();
 
 </script>
 
