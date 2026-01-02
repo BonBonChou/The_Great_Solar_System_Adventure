@@ -1728,11 +1728,6 @@ function updateActionButtons(){
   btnDiscard.disabled = !hasSelected || discardsLeft <= 0;    // 沒選牌 / 沒棄牌次數 不能丟棄
 }
 
-function goToKnowledgePage(){
-  saveProgress();
-  location.href = 'knowledge_stage1_level1.html'; // ✅ 改成你該關的知識頁網址
-}
-
 function updateHUD(){
   // 大關中文：第X大關
   hudStageText.textContent = `第${stageToChinese(bigStage)}大關`;
@@ -2366,7 +2361,7 @@ passContinue.addEventListener('click', ()=>{
   saveProgress();
 
   // 4) 跳知識頁（知識頁用 levelIndex 決定內容）
-  goToKnowledgePage();
+  location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/intro1-1.html";
 });
 
 
@@ -2454,69 +2449,8 @@ function restartCurrentLevel(){
 
 /* ===== 遊戲重頭開始（清存檔 + 回到初始狀態） ===== */
 function restartWholeGame(){
-  // 1) 清存檔
   localStorage.removeItem('gameState');
-
-  // 2) 重置進度
-  levelIndex = 0;
-  const info = LEVELS[levelIndex];
-
-  bigStage = info.stage;
-  fuel = 0;
-  targetFuel = info.targetFuel;
-
-  // 3) 重置資源與永久狀態
-  coins = 10;
-  HAND_SIZE = 8;
-
-  ownedTools.clear();
-  ownedConsumables.clear();
-
-  supplyCountInLevel = 0;
-  usedHandTypesInLevel.clear();
-  immuneHitUsedInLevel = false;
-  tempEffects = {
-    nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
-    nextSupplyHandRankPlus1: 0,           // 消耗品：下一次牌型等級 +1（一次性）
-
-    nextSupplyFuelPctFromDiscard: 0,      // 道具：每棄1張牌，下次補給 +5%（累積到下一次補給後清空）
-    nextSupplyFuelMult: 1,                // 道具：高牌的下次補給 +50%（一次性倍率）
-
-    freeSupplyUses: 0,                    // 消耗品/道具：額外一次補給（不計入扣血頻率）
-
-    nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
-    nextRefillMinus: 0,                   // ✅ 因為超上限抽牌，下次補給補牌數 -1（一次性）
-    supplyHpOverride: null,
-  };
-
-  // 4) 重置商店（新局就刷新一次）
-  shopTools = [];
-  shopConsumables = [];
-  generateShopOffers();
-
-  // 5) 重置關卡數值
-  maxHP = computeMaxHP();
-  hp = maxHP;
-  discardsLeft = DISCARD_PER_LEVEL;
-  supplyCountInStage = 0;
-
-  initBigStageResetDeck();
-
-  hand = [];
-  drawFromPile(Math.min(HAND_SIZE, HAND_SIZE_MAX));
-
-  // 6) UI
-  closeFailModal();
-  closeShop();            // 避免商店還開著
-  closeRules();           // 避免規則還開著
-  renderHand();
-  updateHUD();
-
-  // 7) 存一次（可選，但我建議存，避免玩家重整又回舊狀態）
-  saveProgress();
-
-  // 8) 繼續玩
-  setGamePaused(false);
+  location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/stage1-1.html";
 }
 
 failRetry.addEventListener('click', restartCurrentLevel);
