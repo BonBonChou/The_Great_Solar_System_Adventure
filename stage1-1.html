@@ -1060,15 +1060,15 @@ let hand = [];      // 手牌（會變）
 let played = [];    // 已出牌（不回牌庫）
 let maxHP = 0;
 let supplyBonusPerClear = 0; // 永久成長：通關累積的補給加成
+let bigStageClearCount = 0;  // 已通過的大關數（可累積）
 
 function computeMaxHP(){
-  // 基礎血量取決於大關（你圖：10/8/6）
+  // 基礎血量取決於大關（10/8/6）
   const base = STAGE_INFO[bigStage]?.baseMaxHP ?? 10;
 
-  // TODO：之後接道具：
-  // - "最大 HP +1"（永久）
-  // - "每通過一大關，最大 HP +1"（依大關累積）
-  const bonus = 0;
+  const maxHpToolCount = ownedTools.get("最大 HP +1")?.count ?? 0;
+  const perStageToolCount = ownedTools.get("每通過一大關，最大 HP +1")?.count ?? 0;
+  const bonus = maxHpToolCount + (bigStageClearCount * perStageToolCount);
 
   return base + bonus;
 }
@@ -2370,6 +2370,8 @@ function passLevel(){
 passContinue.addEventListener('click', ()=>{
   const info = LEVELS[levelIndex] || LEVELS[0];
   const gainCoins = computePassCoins(info.passCoins);
+  const nextInfo = LEVELS[levelIndex + 1];
+  const isStageClear = !nextInfo || nextInfo.stage !== info.stage;
 
   // 1) 發通關金幣
   coins += gainCoins;
@@ -2380,6 +2382,10 @@ passContinue.addEventListener('click', ()=>{
   // 3) 通關永久成長
   if(ownedTools.has("補給 +20 燃料，每次通關後再永久 +2 燃料")){
     supplyBonusPerClear += 2;
+  }
+
+  if(isStageClear){
+    bigStageClearCount += 1;
   }
 
   // 4) 存檔（讓知識頁回來時資料都在）
@@ -2832,6 +2838,8 @@ function applyProgress(state){
   fuel = state.fuel ?? 0;
   targetFuel = state.targetFuel ?? info.targetFuel; // 以存檔為主，沒有就用表
 
+  bigStageClearCount = state.bigStageClearCount ?? 0;
+
   // ✅ HP / maxHP（maxHP 建議也存，但沒存就重算）
   maxHP = state.maxHP ?? computeMaxHP();
   hp = state.hp ?? maxHP;
@@ -2917,6 +2925,7 @@ function saveProgress(){
     supplyCountInStage,
     HAND_SIZE,
     supplyBonusPerClear,
+    bigStageClearCount,
 
     // 牌堆
     drawPile,
