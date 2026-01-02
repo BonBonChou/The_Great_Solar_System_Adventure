@@ -976,6 +976,9 @@ const FUEL_BY_HANDTYPE = {
   "同花順": 220,
   "皇家同花順": 350
 };
+const HAND_TYPE_ORDER = [
+  "高牌","一對","兩對","三條","順子","同花","葫蘆","鐵支","同花順","皇家同花順"
+];
 
 /* ===== 關卡資料 =====
    
@@ -1077,6 +1080,7 @@ function computeMaxHP(){
 let supplyCountInLevel = 0;          // 本關第幾次補給
 let usedHandTypesInLevel = new Set();// 本關已用過的牌型
 let immuneHitUsedInLevel = false;    // 是否已用掉「免疫第一次傷害」
+let straightPlusSupplyUsedInLevel = false; // 是否已用掉「順子以上首次補給回復」
 
 // 消耗品 / 暫時效果
 let tempEffects = {
@@ -1815,7 +1819,32 @@ function resolveSupply(outCards, stageCountForThisSupply){
   const cardCount = outCards.length;
 
   supplyCountInLevel += 1;
+  const isNewHandTypeInLevel = !usedHandTypesInLevel.has(type);
   usedHandTypesInLevel.add(type);
+
+  const straightIndex = HAND_TYPE_ORDER.indexOf("順子");
+  const typeIndex = HAND_TYPE_ORDER.indexOf(type);
+  const isStraightOrBetter = typeIndex >= straightIndex;
+
+  let hpGain = 0;
+  if(ownedTools.has("每關首次補給回復 1 HP") && supplyCountInLevel === 1){
+    hpGain += 1;
+  }
+  if(ownedTools.has("每關每使用一種新牌型，回復 1 HP") && isNewHandTypeInLevel){
+    hpGain += 1;
+  }
+  if(
+    ownedTools.has("每關首次補給順子以上牌型，回復 1 HP")
+    && isStraightOrBetter
+    && !straightPlusSupplyUsedInLevel
+  ){
+    hpGain += 1;
+    straightPlusSupplyUsedInLevel = true;
+  }
+  if(hpGain > 0){
+    hp = Math.min(maxHP, hp + hpGain);
+    updateHUD();
+  }
 
   const isFaceOnly = outCards.every(c => ['J','Q','K','A'].includes(c.rank));
 
@@ -2204,9 +2233,6 @@ function isStraightWithGap1(vals){
 function handTypeUpgraded(type, step){
   if(!step) return type;
 
-  const order = [
-    "高牌","一對","兩對","三條","順子","同花","葫蘆","鐵支","同花順","皇家同花順"
-  ];
   const i = order.indexOf(type);
   if(i === -1) return type;
 
@@ -2300,6 +2326,7 @@ function startLevel(){
   supplyCountInLevel = 0;
   usedHandTypesInLevel.clear();
   immuneHitUsedInLevel = false;
+  straightPlusSupplyUsedInLevel = false;
   tempEffects = {
     nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
     nextSupplyHandRankPlus1: 0,           // 消耗品：下一次牌型等級 +1（一次性）
@@ -2444,6 +2471,7 @@ function restartCurrentLevel(){
   supplyCountInLevel = 0;
   usedHandTypesInLevel.clear();
   immuneHitUsedInLevel = false;
+  straightPlusSupplyUsedInLevel = false;
   tempEffects = {
     nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
     nextSupplyHandRankPlus1: 0,           // 消耗品：下一次牌型等級 +1（一次性）
