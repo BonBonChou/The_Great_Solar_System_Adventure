@@ -891,7 +891,6 @@ body{
    - tools: 會被塞進 shopTools（道具 8 格）
    - consumables: 會被塞進 shopConsumables（消耗品 2 格）
    - levelIndex: 指定關卡（0=水星, 1=金星...）
-   - levelName: 指定關卡名稱（例："火星"），找不到就忽略
    - startHP: 指定當前血量（會被夾在 0~maxHP）
    - initialHand: 指定第一輪手牌（補給後照樣正常抽）
      - 格式可用 ["SA","D2"] 或 [{suit:"S",rank:"A"}]
@@ -900,17 +899,17 @@ body{
 const TEST_FORCE_SHOP = {
   enabled: true, // 要正常抽就改 false
   tools: [
-    "增加1棄牌次數",
+    "一關內每次補給，額外 +3 燃料",
     // "手牌上限+1張",
   ],
   consumables: [
     "立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫",
   ],
-  levelIndex: null,
-  levelName: null,
+  levelIndex: 6,
+
   startHP: null,
   initialHand: [
-    //{ suit:'S', rank:'2'},
+    { suit:'S', rank:'A'},
     ],
 };
 function findToolByName(name){
@@ -939,11 +938,6 @@ function applyTestLevelOverride(){
     const idx = Math.max(0, Math.min(LEVELS.length - 1, TEST_FORCE_SHOP.levelIndex));
     levelIndex = idx;
     return;
-  }
-  if(typeof TEST_FORCE_SHOP.levelName === 'string' && TEST_FORCE_SHOP.levelName.trim()){
-    const target = TEST_FORCE_SHOP.levelName.trim();
-    const idx = LEVELS.findIndex(l => l.name === target);
-    if(idx >= 0) levelIndex = idx;
   }
 }
 function applyTestStartHp(){
@@ -983,14 +977,14 @@ function forceInjectShopOffers(){
       // 已在貨架上就跳過
       if(shopTools.some(t => t.name === def.name)) return;
 
-      // 塞進去：放最前面（你要放最後也可以改 push）
+      // 塞進去：放最前面
       shopTools.unshift(def);
 
       // 超過 8 格就砍掉最後一個（避免砍到剛塞的）
       if(shopTools.length > 8) shopTools.pop();
     });
 
-    // 仍確保固定道具在最後（沿用你原本規則）
+    // 仍確保固定道具在最後
     const nonFixedPart = shopTools.filter(t=>!t.fixed);
     const fixedPart = shopTools.filter(t=>t.fixed);
     shopTools = [...nonFixedPart, ...fixedPart].slice(0,8);
@@ -1073,8 +1067,8 @@ const LEVELS = [
   { stage:3, name:"冥王星", targetFuel:250, passCoins:60, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/pluto.png", traits:["稀薄/缺乏大氣","地質高度活躍","極端低溫"] },
 ];
 
-// 目前關卡指標（用 index 最好管理）
-let levelIndex = 0; // 0=水星，1=金星... 你之後可用存檔記住
+// 目前關卡
+let levelIndex = 0; // 0=水星，1=金星...
 
 /* =========================================================
    DOM
@@ -1116,7 +1110,7 @@ SUITS.forEach(suit=>{
 /* =========================================================
    遊戲狀態
 ========================================================= */
-let bigStage = 1;          // 大關：1~3（你規格）
+let bigStage = 1;          // 大關：1~3
 let hp = 3;
 let fuel = 0;
 let targetFuel = 0;
@@ -1165,7 +1159,7 @@ let tempEffects = {
 
 
 /* =========================================================
-   排序（你指定：點數優先，花色 S→H→D→C）
+   排序（點數優先，花色 S→H→D→C）
 ========================================================= */
 const RANK_ORDER = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
 const SUIT_ORDER = ['S','H','D','C'];
@@ -1278,10 +1272,10 @@ function renderItemCard(parent, item){
 }
 
 /* ===== 金幣 & 商店資料 ===== */
-let coins = 80; // 先給測試用初始金幣（之後你要從關卡/存檔讀取再改）
+let coins = 10; // 初始金幣
 const shopCoinEl = document.getElementById('shop-coin');
 
-/* 道具清單（用 effect 當作顯示名；之後你要加 id 也行） */
+/* 道具清單 */
 const TOOL_DATA = [
   { name:"人頭牌 +5 燃料", price:[18], max:1 },
   { name:"每關首次補給 +30% 燃料", price:[28], max:1 },
@@ -1323,7 +1317,7 @@ const TOOL_DATA = [
   { name:"在【生命或文明干擾】星球的首次棄牌不消耗次數", price:[18], max:1 },
   { name:"在【極端低溫】星球的首次補給 +15 燃料", price:[18], max:1 },
 
-  // 固定道具（永遠在商店，但你說不要放最前面 → 我們會放最後）
+  // 固定道具（永遠在商店，放最後）
   { name:"通關金幣 +10%", price:[16], max:1, fixed:true },
   { name:"若本關未使用棄牌，通關金幣 +30%", price:[20], max:1, fixed:true }
 ];
@@ -1339,11 +1333,11 @@ const CONSUMABLE_DATA = [
   { name:"立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫", price:14, sellable:false }
 ];
 
-/* 已擁有（之後你要存檔再接 localStorage 就好） */
+/* 已擁有 */
 const ownedTools = new Map();        // key: name, value: count
 const ownedConsumables = new Map();  // key: name, value: count
 
-/* 商店當前貨架（每關/每次開店你可重抽；目前先「開店時如果空才抽」） */
+/* 商店當前貨架 */
 let shopTools = [];       // 8 格（含固定）
 let shopConsumables = []; // 2 格
 
@@ -1748,7 +1742,6 @@ function isSellableOwned(type, name){
     return def?.sellable !== false;
   }else{
     const def = findConsumableDefByName(name);
-    // 你要消耗品全部不可賣：資料已設 false
     return def?.sellable !== false;
   }
 }
@@ -1826,7 +1819,7 @@ function updateHUD(){
   // 星球名 + 中央圖片
   const info = LEVELS[levelIndex];
   levelNameEl.textContent = info?.name ?? "（未知星球）";
-  planetImageEl.src = info?.image || ""; // 你填了網址就會顯示
+  planetImageEl.src = info?.image || "";
   planetImageEl.style.display = (planetImageEl.src ? "" : "none");
 
   updateTopUILayout();
@@ -1848,7 +1841,7 @@ function computePassCoins(baseCoins){
     coins *= 1.30;
   }
 
-  // 無條件捨去（你規格）
+  // 無條件捨去
   return Math.floor(coins);
 }
 
@@ -1866,7 +1859,6 @@ function isSellableOwned(type, name){
     return def?.sellable !== false;
   }else{
     const def = findConsumableDefByName(name);
-    // 你要消耗品全部不可賣：資料已設 false
     return def?.sellable !== false;
   }
 }
@@ -2092,16 +2084,10 @@ function armConsumablesBeforeSupply(){
 
   // 6) 極端低溫：下一次補給 +30%（一次性）
   if(hasConsumable("在【極端低溫】星球的下一次補給 +30% 燃料") && hasLevelTrait("極端低溫")){
-    // 用你現成的倍率欄位（與高牌+50%共存）
+    // （與高牌+50%共存）
     tempEffects.nextSupplyFuelMult = Math.max(tempEffects.nextSupplyFuelMult, 1.3);
     consumeConsumable("在【極端低溫】星球的下一次補給 +30% 燃料");
   }
-}
-
-// 先做簡單 hook：之後你要改成看 LEVELS 的 tag/trait
-function isExtremeColdCurrentLevel(){
-  // TODO: 你之後補規則再改這裡
-  return false;
 }
 
 /* =========================================================
@@ -2188,7 +2174,7 @@ function openPick2Overlay(twoCards, onPick){
 }
 
 function useConsumable_Draw2Pick1(){
-  // 牌庫不足：能抽幾張就抽幾張，但少於2就直接提示（你也可改成不允許買）
+  // 牌庫不足：能抽幾張就抽幾張，但少於2就直接提示
   if(!drawPile || drawPile.length === 0){
     showToastText('牌庫沒有牌了', 1000);
     return;
@@ -3146,7 +3132,7 @@ function updateTopUILayout(){
 // 初次、resize、以及可能變動時呼叫
 window.addEventListener('resize', updateTopUILayout);
 
-// 如果你的 HUD 內容會因為文字/數值變長而換行，建議也監聽它
+// 如果 HUD 內容會因為文字/數值變長而換行，建議也監聽它
 const hudLeftEl = document.getElementById('hud-left');
 if(hudLeftEl && 'ResizeObserver' in window){
   new ResizeObserver(updateTopUILayout).observe(hudLeftEl);
