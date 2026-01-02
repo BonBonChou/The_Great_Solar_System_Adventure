@@ -662,6 +662,7 @@ body{
 }
 
 #pass-title{
+  text-align: center;
   font-size:1.35em;
   font-weight:900;
   color:#00ffcc;
@@ -669,6 +670,7 @@ body{
 }
 
 #pass-text{
+  text-align: center;
   font-size:1.1em;
   line-height:1.6;
   opacity:0.92;
@@ -677,7 +679,7 @@ body{
 
 #pass-actions{
   display:flex;
-  justify-content:flex-end;
+  justify-content:center;
 }
 #pass-actions .action-btn{
   width:140px;
@@ -704,6 +706,7 @@ body{
 }
 
 #fail-title{
+  text-align: center;
   font-size:1.35em;
   font-weight:900;
   color:#ff8a8a;
@@ -711,6 +714,7 @@ body{
 }
 
 #fail-text{
+  text-align: center;
   font-size:1.1em;
   line-height:1.6;
   opacity:0.92;
@@ -905,7 +909,7 @@ function findConsumableByName(name){
 }
 function forceInjectShopOffers(){
   if(!TEST_FORCE_SHOP?.enabled) return;
-
+  
   // ===== 道具：強制塞進 8 格 =====
   if(Array.isArray(TEST_FORCE_SHOP.tools) && TEST_FORCE_SHOP.tools.length){
     TEST_FORCE_SHOP.tools.forEach(name=>{
@@ -952,7 +956,7 @@ function forceInjectShopOffers(){
 /* =========================================================
    規格可調區
 ========================================================= */
-let HAND_SIZE = 8;                 // 可由道具升到 11（你之後改這裡即可）
+let HAND_SIZE = 8;                 // 可由道具升到 11
 const HAND_SIZE_MAX = 11;
 const MAX_SELECT = 5;
 
@@ -3106,8 +3110,10 @@ function boot(){
   }
 }
 
+localStorage.removeItem('gameState'); // 測試完要刪
 boot();
 updateTopUILayout();
+
 
 </script>
 
