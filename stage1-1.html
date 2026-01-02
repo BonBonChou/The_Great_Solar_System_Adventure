@@ -1058,6 +1058,7 @@ let drawPile = [];  // 可抽牌庫（會變）
 let hand = [];      // 手牌（會變）
 let played = [];    // 已出牌（不回牌庫）
 let maxHP = 0;
+let supplyBonusPerClear = 0; // 永久成長：通關累積的補給加成
 
 function computeMaxHP(){
   // 基礎血量取決於大關（你圖：10/8/6）
@@ -1842,6 +1843,10 @@ function resolveSupply(outCards, stageCountForThisSupply){
     fuelGain *= 1.3;
   }
 
+  if(ownedTools.has("補給 +20 燃料，每次通關後再永久 +2 燃料")){
+    fuelGain += 20 + supplyBonusPerClear;
+  }
+
   if(ownedTools.has("一關內每次補給，額外 +3 燃料")){
     fuelGain += supplyCountInLevel * 3;
   }
@@ -2357,10 +2362,15 @@ passContinue.addEventListener('click', ()=>{
   // 2) 通關才刷新商店
   generateShopOffers();
 
-  // 3) 存檔（讓知識頁回來時資料都在）
+  // 3) 通關永久成長
+  if(ownedTools.has("補給 +20 燃料，每次通關後再永久 +2 燃料")){
+    supplyBonusPerClear += 2;
+  }
+
+  // 4) 存檔（讓知識頁回來時資料都在）
   saveProgress();
 
-  // 4) 跳知識頁（知識頁用 levelIndex 決定內容）
+  // 5) 跳知識頁（知識頁用 levelIndex 決定內容）
   location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/intro1-1.html";
 });
 
@@ -2815,6 +2825,7 @@ function applyProgress(state){
   discardsLeft = state.discardsLeft ?? DISCARD_PER_LEVEL;
   supplyCountInStage = state.supplyCountInStage ?? 0;
   HAND_SIZE = state.HAND_SIZE ?? 8;
+  supplyBonusPerClear = state.supplyBonusPerClear ?? 0;
 
   // ✅ 牌堆
   drawPile = state.drawPile ?? [];
@@ -2888,6 +2899,7 @@ function saveProgress(){
     discardsLeft,
     supplyCountInStage,
     HAND_SIZE,
+    supplyBonusPerClear,
 
     // 牌堆
     drawPile,
