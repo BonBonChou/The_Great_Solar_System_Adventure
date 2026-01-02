@@ -1053,6 +1053,7 @@ let hp = 3;
 let fuel = 0;
 let targetFuel = 0;
 let discardsLeft = DISCARD_PER_LEVEL;
+let extraDiscards = 0;
 let supplyCountInStage = 0;  // 本大關補給次數累積，用來扣 HP
 let drawPile = [];  // 可抽牌庫（會變）
 let hand = [];      // 手牌（會變）
@@ -1599,6 +1600,14 @@ function buyTool(tool){
   coins -= price;
 
   ownedAdd(ownedTools, tool.name, price);
+
+  if(tool.name === "增加1棄牌次數"){
+    extraDiscards += 1;
+    discardsLeft += 1;
+    updateHUD();
+  }else if(tool.name === "手牌上限+1張"){
+    HAND_SIZE = Math.min(HAND_SIZE + 1, HAND_SIZE_MAX);
+  }
 
   // ✅ 若達上限：從本關商店貨架移除（不補貨、不刷新）
   if(isToolSoldOut(tool)){
@@ -2307,7 +2316,7 @@ function startLevel(){
 
 
   // 每關重置棄牌次數
-  discardsLeft = DISCARD_PER_LEVEL;
+  discardsLeft = DISCARD_PER_LEVEL + extraDiscards;
 
 
   initBigStageResetDeck();
@@ -2445,7 +2454,7 @@ function restartCurrentLevel(){
 
 
   // 棄牌、補給計數
-  discardsLeft = DISCARD_PER_LEVEL;
+  discardsLeft = DISCARD_PER_LEVEL + extraDiscards;
   supplyCountInStage = 0;
 
   // 手牌上限 HAND_SIZE：目前是「永久道具」會改它，所以重開別動 HAND_SIZE
@@ -2828,9 +2837,10 @@ function applyProgress(state){
   hp = state.hp ?? maxHP;
 
   // ✅ 棄牌 / 補給計數 / 手牌上限
-  discardsLeft = state.discardsLeft ?? DISCARD_PER_LEVEL;
+  extraDiscards = state.extraDiscards ?? 0;
+  discardsLeft = state.discardsLeft ?? (DISCARD_PER_LEVEL + extraDiscards);
   supplyCountInStage = state.supplyCountInStage ?? 0;
-  HAND_SIZE = state.HAND_SIZE ?? 8;
+  HAND_SIZE = Math.min(state.HAND_SIZE ?? 8, HAND_SIZE_MAX);
   supplyBonusPerClear = state.supplyBonusPerClear ?? 0;
 
   // ✅ 牌堆
@@ -2903,6 +2913,7 @@ function saveProgress(){
     fuel,
     targetFuel,
     discardsLeft,
+    extraDiscards,
     supplyCountInStage,
     HAND_SIZE,
     supplyBonusPerClear,
