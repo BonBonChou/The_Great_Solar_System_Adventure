@@ -1859,6 +1859,12 @@ function resolveSupply(outCards, stageCountForThisSupply){
     fuelGain *= 1.2;
   }
 
+  if(ownedTools.has("目前牌組每少1張牌 +2 燃料")){
+    const currentDeckSize = (drawPile?.length ?? 0) + (hand?.length ?? 0);
+    const missingCards = Math.max(0, deck.length - currentDeckSize);
+    fuelGain += missingCards * 2;
+  }
+
   if(ownedTools.has("一關內每使用過一種牌型 +6 燃料")){
     fuelGain += usedHandTypesInLevel.size * 6;
   }
