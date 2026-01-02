@@ -1039,6 +1039,14 @@ const HAND_TYPE_ORDER = [
   "高牌","一對","兩對","三條","順子","同花","葫蘆","鐵支","同花順","皇家同花順"
 ];
 
+const PLANET_HANDTYPE_BONUS = {
+  "兩對": ["艾歐", "歐羅巴"],
+  "三條": ["冥王星"],
+  "順子": ["水星", "金星", "地球", "火星"],
+  "同花": ["天王星", "海王星"],
+  "葫蘆": ["木星", "土星"]
+};
+
 /* ===== 關卡資料 =====
    
 =========================*/
@@ -2003,6 +2011,11 @@ function resolveSupply(outCards, stageCountForThisSupply){
     fuelGain += 15;
   }
 
+  const planetBonusHands = PLANET_HANDTYPE_BONUS[type] ?? [];
+  if(planetBonusHands.includes(getCurrentLevelInfo().name)){
+    fuelGain *= 1.5;
+  }
+
   fuelGain = Math.floor(fuelGain);
 
   /* ===== 觸發：高牌的下次補給 +50% ===== */
@@ -2846,7 +2859,7 @@ const RULE_PAGES = [
         ["兩對", "35", "衛星", "1.5×"],
         ["三條", "45", "矮行星", "1.5×"],
         ["順子", "55", "岩石行星", "1.5×"],
-        ["同花", "60", "冰巨星", "1.5×"],
+        ["同花", "60", "冰巨行星", "1.5×"],
         ["葫蘆", "70", "氣體巨行星", "1.5×"],
         ["鐵支", "130", "", ""],
         ["同花順", "220", "", ""],
