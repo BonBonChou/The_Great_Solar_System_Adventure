@@ -886,9 +886,14 @@ body{
 
 <script>
 /* =========================================================
-   測試用：強制商店一定刷到某些商品
+   測試用：強制商店一定刷到某些商品 + 開場狀態
    - tools: 會被塞進 shopTools（道具 8 格）
    - consumables: 會被塞進 shopConsumables（消耗品 2 格）
+   - levelIndex: 指定關卡（0=水星, 1=金星...）
+   - levelName: 指定關卡名稱（例："火星"），找不到就忽略
+   - startHP: 指定當前血量（會被夾在 0~maxHP）
+   - initialHand: 指定第一輪手牌（補給後照樣正常抽）
+     - 格式可用 ["SA","D2"] 或 [{suit:"S",rank:"A"}]
    - enabled=false 時完全不影響正常抽樣
 ========================================================= */
 const TEST_FORCE_SHOP = {
@@ -900,12 +905,65 @@ const TEST_FORCE_SHOP = {
   consumables: [
     "立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫",
   ],
+  levelIndex: null,
+  levelName: null,
+  startHP: null,
+  initialHand: [],
 };
 function findToolByName(name){
   return TOOL_DATA.find(t => t.name === name) || null;
 }
 function findConsumableByName(name){
   return CONSUMABLE_DATA.find(c => c.name === name) || null;
+}
+function normalizeCardSpec(spec){
+  if(!spec) return null;
+  if(typeof spec === 'string'){
+    const trimmed = spec.trim().toUpperCase();
+    if(trimmed.length !== 2) return null;
+    const suit = trimmed[0];
+    const rank = trimmed[1];
+    return { suit, rank };
+  }
+  if(typeof spec === 'object' && spec.suit && spec.rank){
+    return { suit: String(spec.suit).toUpperCase(), rank: String(spec.rank).toUpperCase() };
+  }
+  return null;
+}
+function applyTestLevelOverride(){
+  if(!TEST_FORCE_SHOP?.enabled) return;
+  if(Number.isInteger(TEST_FORCE_SHOP.levelIndex)){
+    const idx = Math.max(0, Math.min(LEVELS.length - 1, TEST_FORCE_SHOP.levelIndex));
+    levelIndex = idx;
+    return;
+  }
+  if(typeof TEST_FORCE_SHOP.levelName === 'string' && TEST_FORCE_SHOP.levelName.trim()){
+    const target = TEST_FORCE_SHOP.levelName.trim();
+    const idx = LEVELS.findIndex(l => l.name === target);
+    if(idx >= 0) levelIndex = idx;
+  }
+}
+function applyTestStartHp(){
+  if(!TEST_FORCE_SHOP?.enabled) return;
+  if(TEST_FORCE_SHOP.startHP == null) return;
+  const value = Number(TEST_FORCE_SHOP.startHP);
+  if(Number.isNaN(value)) return;
+  hp = Math.min(maxHP, Math.max(0, value));
+}
+function applyTestInitialHand(){
+  if(!TEST_FORCE_SHOP?.enabled) return false;
+  if(!Array.isArray(TEST_FORCE_SHOP.initialHand) || TEST_FORCE_SHOP.initialHand.length === 0){
+    return false;
+  }
+  hand = [];
+  TEST_FORCE_SHOP.initialHand.forEach(spec=>{
+    const cardSpec = normalizeCardSpec(spec);
+    if(!cardSpec) return;
+    const idx = drawPile.findIndex(c => c.suit === cardSpec.suit && c.rank === cardSpec.rank);
+    if(idx < 0) return;
+    hand.push(drawPile.splice(idx, 1)[0]);
+  });
+  return true;
 }
 function forceInjectShopOffers(){
   if(!TEST_FORCE_SHOP?.enabled) return;
@@ -2381,6 +2439,7 @@ function startLevel(){
   maxHP = computeMaxHP();
   hp = Math.min(hp, maxHP);
   if(hp <= maxHP) hp = maxHP;
+  applyTestStartHp(); // 測試工具
   supplyCountInLevel = 0;
   usedHandTypesInLevel.clear();
   immuneHitUsedInLevel = false;
@@ -2408,8 +2467,13 @@ function startLevel(){
   initBigStageResetDeck();
 
   // 發手牌
-  hand = [];
-  drawFromPile(Math.min(HAND_SIZE, HAND_SIZE_MAX));
+  const injected = applyTestInitialHand();
+  if(!injected){
+    hand = [];
+  }
+  const targetHandSize = Math.min(HAND_SIZE, HAND_SIZE_MAX);
+  const drawCount = Math.max(0, targetHandSize - hand.length);
+  drawFromPile(drawCount);
   renderHand();
 
   updateHUD();
@@ -3106,6 +3170,7 @@ function boot(){
     updateHUD();
   }else{
     // 沒進度 → 當成新遊戲
+    applyTestLevelOverride();
     startLevel();
   }
 }
