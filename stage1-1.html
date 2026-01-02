@@ -991,21 +991,21 @@ const STAGE_INFO = {
 
 const LEVELS = [
   // 第一大關
-  { stage:1, name:"水星", targetFuel:60, passCoins:10, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/mercury.png" },
-  { stage:1, name:"金星", targetFuel:70, passCoins:12, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/venus.png" },
-  { stage:1, name:"地球", targetFuel:80, passCoins:14, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/earth.png" },
-  { stage:1, name:"火星", targetFuel:90, passCoins:16, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/mars.png" },
+  { stage:1, name:"水星", targetFuel:60, passCoins:10, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/mercury.png", traits:["極端溫差","稀薄/缺乏大氣"] },
+  { stage:1, name:"金星", targetFuel:70, passCoins:12, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/venus.png", traits:["高壓環境","地質高度活躍"] },
+  { stage:1, name:"地球", targetFuel:80, passCoins:14, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/earth.png", traits:["地質高度活躍","生命或文明干擾"] },
+  { stage:1, name:"火星", targetFuel:90, passCoins:16, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/mars.png", traits:["極端溫差","稀薄/缺乏大氣"] },
 
   // 第二大關
-  { stage:2, name:"木星", targetFuel:140, passCoins:22, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/jupiter.png" },
-  { stage:2, name:"艾歐", targetFuel:160, passCoins:25, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/io.png" },
-  { stage:2, name:"歐羅巴", targetFuel:175, passCoins:28, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/europa.png" },
-  { stage:2, name:"土星", targetFuel:190, passCoins:32, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/saturn.png" },
+  { stage:2, name:"木星", targetFuel:140, passCoins:22, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/jupiter.png", traits:["高壓環境","極端氣候"] },
+  { stage:2, name:"艾歐", targetFuel:160, passCoins:25, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/io.png", traits:["稀薄/缺乏大氣","地質高度活躍","極端低溫"] },
+  { stage:2, name:"歐羅巴", targetFuel:175, passCoins:28, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/europa.png", traits:["稀薄/缺乏大氣","生命或文明干擾","極端低溫"] },
+  { stage:2, name:"土星", targetFuel:190, passCoins:32, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/saturn.png", traits:["高壓環境"] },
 
   // 第三大關
-  { stage:3, name:"天王星", targetFuel:210, passCoins:45, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/uranus.png" },
-  { stage:3, name:"海王星", targetFuel:230, passCoins:50, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/neptune.png" },
-  { stage:3, name:"冥王星", targetFuel:250, passCoins:60, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/pluto.png" },
+  { stage:3, name:"天王星", targetFuel:210, passCoins:45, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/uranus.png", traits:["極端低溫"] },
+  { stage:3, name:"海王星", targetFuel:230, passCoins:50, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/neptune.png", traits:["極端氣候","極端低溫"] },
+  { stage:3, name:"冥王星", targetFuel:250, passCoins:60, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/pluto.png", traits:["稀薄/缺乏大氣","地質高度活躍","極端低溫"] },
 ];
 
 // 目前關卡指標（用 index 最好管理）
@@ -1080,6 +1080,7 @@ function computeMaxHP(){
 let supplyCountInLevel = 0;          // 本關第幾次補給
 let usedHandTypesInLevel = new Set();// 本關已用過的牌型
 let immuneHitUsedInLevel = false;    // 是否已用掉「免疫第一次傷害」
+let freeDiscardUsedInLevel = false;  // 是否用掉「首次棄牌不消耗次數」
 let straightPlusSupplyUsedInLevel = false; // 是否已用掉「順子以上首次補給回復」
 
 // 消耗品 / 暫時效果
@@ -1252,7 +1253,7 @@ const TOOL_DATA = [
   { name:"在【極端溫差】星球補給 +15% 燃料", price:[18], max:1 },
   { name:"在【稀薄/缺乏大氣】星球，每次補給移除的牌隨機少 1 張", price:[20], max:1 },
   { name:"在【高壓環境】星球補給 +10 燃料", price:[16], max:1 },
-  { name:"在【劇烈能量風暴】星球的首次補給 +20% 燃料", price:[16], max:1 },
+  { name:"在【極端氣候】星球的首次補給 +20% 燃料", price:[16], max:1 },
   { name:"在【地質高度活躍】星球的補給包含 3 張或以下時，燃料 +25%", price:[18], max:1 },
   { name:"在【生命或文明干擾】星球的首次棄牌不消耗次數", price:[18], max:1 },
   { name:"在【極端低溫】星球的首次補給 +15 燃料", price:[18], max:1 },
@@ -1907,6 +1908,44 @@ function resolveSupply(outCards, stageCountForThisSupply){
     fuelGain += usedHandTypesInLevel.size * 6;
   }
 
+  if(
+    ownedTools.has("在【極端溫差】星球補給 +15% 燃料")
+    && hasLevelTrait("極端溫差")
+  ){
+    fuelGain *= 1.15;
+  }
+
+  if(
+    ownedTools.has("在【極端氣候】星球的首次補給 +20% 燃料")
+    && hasLevelTrait("極端氣候")
+    && supplyCountInLevel === 1
+  ){
+    fuelGain *= 1.2;
+  }
+
+  if(
+    ownedTools.has("在【地質高度活躍】星球的補給包含 3 張或以下時，燃料 +25%")
+    && hasLevelTrait("地質高度活躍")
+    && cardCount <= 3
+  ){
+    fuelGain *= 1.25;
+  }
+
+  if(
+    ownedTools.has("在【高壓環境】星球補給 +10 燃料")
+    && hasLevelTrait("高壓環境")
+  ){
+    fuelGain += 10;
+  }
+
+  if(
+    ownedTools.has("在【極端低溫】星球的首次補給 +15 燃料")
+    && hasLevelTrait("極端低溫")
+    && supplyCountInLevel === 1
+  ){
+    fuelGain += 15;
+  }
+
   fuelGain = Math.floor(fuelGain);
 
   /* ===== 觸發：高牌的下次補給 +50% ===== */
@@ -1945,6 +1984,15 @@ function resolveSupply(outCards, stageCountForThisSupply){
   return { type, fuelGain, hpDelta, cardCount, extraDiscards };
 }
 
+function getCurrentLevelInfo(){
+  return LEVELS[levelIndex] || LEVELS[0];
+}
+
+function hasLevelTrait(trait){
+  const info = getCurrentLevelInfo();
+  return Array.isArray(info.traits) && info.traits.includes(trait);
+}
+
 function armConsumablesBeforeSupply(){
   // 1) 下一次補給：全部不移除（一次性）
   if(!tempEffects.nextSupplyNoRemove && hasConsumable("下一次補給使用的牌全部不移除")){
@@ -1978,8 +2026,7 @@ function armConsumablesBeforeSupply(){
   }
 
   // 6) 極端低溫：下一次補給 +30%（一次性）
-  // ⚠️ 你目前 LEVELS 沒有星球特性欄位，所以先做一個 hook，之後你補規則再改判斷
-  if(hasConsumable("在【極端低溫】星球的下一次補給 +30% 燃料") && isExtremeColdCurrentLevel()){
+  if(hasConsumable("在【極端低溫】星球的下一次補給 +30% 燃料") && hasLevelTrait("極端低溫")){
     // 用你現成的倍率欄位（與高牌+50%共存）
     tempEffects.nextSupplyFuelMult = Math.max(tempEffects.nextSupplyFuelMult, 1.3);
     consumeConsumable("在【極端低溫】星球的下一次補給 +30% 燃料");
@@ -2334,6 +2381,7 @@ function startLevel(){
   usedHandTypesInLevel.clear();
   immuneHitUsedInLevel = false;
   straightPlusSupplyUsedInLevel = false;
+  freeDiscardUsedInLevel = false;
   tempEffects = {
     nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
     nextSupplyHandRankPlus1: 0,           // 消耗品：下一次牌型等級 +1（一次性）
@@ -2486,6 +2534,7 @@ function restartCurrentLevel(){
   usedHandTypesInLevel.clear();
   immuneHitUsedInLevel = false;
   straightPlusSupplyUsedInLevel = false;
+  freeDiscardUsedInLevel = false;
   tempEffects = {
     nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
     nextSupplyHandRankPlus1: 0,           // 消耗品：下一次牌型等級 +1（一次性）
@@ -2572,6 +2621,17 @@ btnPlay.addEventListener('click', ()=>{
   // ✅ 牌如何回收/移除
   const keepAllThisTime = !!tempEffects.nextSupplyNoRemove; // 一次性
   const keepFaceThisTime = ownedTools.has("補給將不會移除人頭牌");
+  const reduceRemovalThisTime =
+    ownedTools.has("在【稀薄/缺乏大氣】星球，每次補給移除的牌隨機少 1 張")
+    && hasLevelTrait("稀薄/缺乏大氣");
+
+  function spareOneRemovedCard(removedCards){
+    if(!reduceRemovalThisTime || removedCards.length === 0) return;
+    const idx = Math.floor(Math.random() * removedCards.length);
+    const [spared] = removedCards.splice(idx, 1);
+    drawPile.push(spared);
+    shuffle(drawPile);
+  }
 
   if(keepAllThisTime){
     drawPile.push(...outCards);
@@ -2588,11 +2648,16 @@ btnPlay.addEventListener('click', ()=>{
       drawPile.push(...back);
       shuffle(drawPile);
     }
+    spareOneRemovedCard(removed);
     if(removed.length){
       played.push(...removed);
     }
   }else{
-    played.push(...outCards);
+    const removed = [...outCards];
+    spareOneRemovedCard(removed);
+    if(removed.length){
+      played.push(...removed);
+    }
   }
 
   // ✅ 補牌（若有「超上限抽牌」效果 → 下次補牌少 1）
@@ -2641,6 +2706,11 @@ btnDiscard.addEventListener('click', ()=>{
   const ids = getSelectedCardIds();
   if(ids.length === 0) return;
 
+  const canUseFreeDiscard =
+    ownedTools.has("在【生命或文明干擾】星球的首次棄牌不消耗次數")
+    && hasLevelTrait("生命或文明干擾")
+    && !freeDiscardUsedInLevel;
+
   if(discardsLeft <= 0){
     showToastText('本關棄牌用完', 1000);
     return;
@@ -2656,7 +2726,12 @@ btnDiscard.addEventListener('click', ()=>{
   drawPile.push(...discardCards);
   shuffle(drawPile);
 
-  discardsLeft -= 1;
+  const freeDiscardThisTime = canUseFreeDiscard;
+  if(freeDiscardThisTime){
+    freeDiscardUsedInLevel = true;
+  }else{
+    discardsLeft -= 1;
+  }
   // ✅ 道具：每棄1張牌，下次補給 +5%
   if(ownedTools.has("每棄1張牌，下次補給獲得燃料 +5%")){
     tempEffects.nextSupplyFuelPctFromDiscard += 0.05 * discardCards.length;
