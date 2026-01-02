@@ -2415,10 +2415,17 @@ passContinue.addEventListener('click', ()=>{
     bigStageClearCount += 1;
   }
 
-  // 4) 存檔（讓知識頁回來時資料都在）
+  // 4) 通關回血道具（只在通關時觸發）
+  if(ownedTools.has("通關時若 HP ≤ 2，回復至 3") && hp <= 2){
+    hp = 3;
+  }
+
+  updateHUD();
+
+  // 5) 存檔（讓知識頁回來時資料都在）
   saveProgress();
 
-  // 5) 跳知識頁（知識頁用 levelIndex 決定內容）
+  // 6) 跳知識頁（知識頁用 levelIndex 決定內容）
   location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/intro1-1.html";
 });
 
