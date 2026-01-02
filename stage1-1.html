@@ -198,6 +198,7 @@ body{
   padding:8px 12px;
   white-space:nowrap;
   font-size:1.05em;
+  text-align: center;
 }
 
 /* ===== HP 血條 ===== */
@@ -908,7 +909,9 @@ const TEST_FORCE_SHOP = {
   levelIndex: null,
   levelName: null,
   startHP: null,
-  initialHand: [],
+  initialHand: [
+    //{ suit:'S', rank:'2'},
+    ],
 };
 function findToolByName(name){
   return TOOL_DATA.find(t => t.name === name) || null;
