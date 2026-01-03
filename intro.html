@@ -11,7 +11,7 @@
       //background: radial-gradient(ellipse at center, #000 0%, #111 100%);
       //overflow: hidden;
       font-family: 'Noto Sans TC', sans-serif;
-      color: white;
+      color: #fff;
       text-align: center;
     }
 
@@ -125,8 +125,6 @@
   </div>
 
   <script>
-    const gameState = JSON.parse(localStorage.getItem('gameState'));
-
     const stars = [
       {
         title: "水星",
@@ -280,12 +278,14 @@
       }
     ]
 
+    const gameState = JSON.parse(localStorage.getItem('gameState'));
 
     window.addEventListener("DOMContentLoaded", () => { // 畫面載入完成後執行
       renderStar(gameState.levelIndex);
     });
 
     function renderStar(index) {
+      console.log(gameState);
       const star = stars[index];
 
       document.getElementById("knowledge-title").textContent = star.title;
