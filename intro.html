@@ -279,10 +279,8 @@
 
     const gameState = JSON.parse(localStorage.getItem('gameState'));
 
-    window.addEventListener("DOMContentLoaded", () => { // 畫面載入完成後執行
-      console.log(gameState);
-      renderStar(gameState.levelIndex);
-    });
+    console.log(gameState.levelIndex);
+    renderStar(gameState.levelIndex);
 
     function renderStar(index) {
       const star = stars[index];
