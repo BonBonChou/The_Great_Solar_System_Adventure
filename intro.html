@@ -277,7 +277,7 @@
       }
     ]
 
-    let data = JSON.parse(localStorage.getItem("gameState")) || { levelIndex: 0 };
+    let data = JSON.parse(localStorage.getItem("gameState")) || {};
     let levelIndex = data.levelIndex;
 
     window.addEventListener("DOMContentLoaded", () => { // 畫面載入完成後執行
