@@ -278,11 +278,10 @@
       }
     ]
 
-    //const gameState = JSON.parse(localStorage.getItem('gameState'));
-    const gameState = localStorage.getItem('levelIndex');
+    const gameState = JSON.parse(localStorage.getItem('gameState'));
 
     window.addEventListener("DOMContentLoaded", () => { // 畫面載入完成後執行
-      renderStar(gameState);
+      renderStar(gameState.levelIndex);
     });
 
     function renderStar(index) {
