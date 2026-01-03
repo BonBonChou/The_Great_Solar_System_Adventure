@@ -276,10 +276,14 @@
         ]
       }
     ]
+    try {
+        const gameState = JSON.parse(localStorage.getItem("gameState")) || {};
+    } catch (e) {
+        console.error("解析 JSON 失敗", e);
+    }
+    //const gameState = JSON.parse(localStorage.getItem("gameState")) || {};
 
-    const gameState = JSON.parse(localStorage.getItem("gameState")) || {};
-
-    console.log(gameState.levelIndex);
+    console.log(gameState);
     renderStar(gameState.levelIndex);
 
     function renderStar(index) {
