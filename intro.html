@@ -277,7 +277,7 @@
       }
     ]
 
-    const levelIndex = localStorage.getItem("levelIndex") || {};
+    const levelIndex = parseInt(localStorage.getItem("levelIndex")) || {};
 
     console.log(levelIndex);
     renderStar(levelIndex);
