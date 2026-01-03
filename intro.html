@@ -110,7 +110,6 @@
   </style>
 </head>
 <body>
-
   <div class="stars"></div>
 
   <div class="container">
@@ -281,11 +280,11 @@
     const gameState = JSON.parse(localStorage.getItem('gameState'));
 
     window.addEventListener("DOMContentLoaded", () => { // 畫面載入完成後執行
+      console.log(gameState);
       renderStar(gameState.levelIndex);
     });
 
     function renderStar(index) {
-      console.log(gameState.levelIndex);
       const star = stars[index];
 
       document.getElementById("knowledge-title").textContent = star.title;
