@@ -277,10 +277,10 @@
       }
     ]
 
-    const gameState = localStorage.getItem("levelIndex") || {};
+    const levelIndex = localStorage.getItem("levelIndex") || {};
 
-    console.log(gameState);
-    renderStar(gameState);
+    console.log(levelIndex);
+    renderStar(levelIndex);
 
     function renderStar(index) {
       const star = stars[index];
@@ -311,8 +311,8 @@
     }
 
     function nextStar() {
-      gameState += 1;
-      localStorage.setItem('levelIndex', gameState);
+      levelIndex += 1;
+      localStorage.setItem("levelIndex", levelIndex);
       location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/stage.html";
     }
 
