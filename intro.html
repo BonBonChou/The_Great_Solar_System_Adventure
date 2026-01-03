@@ -276,15 +276,11 @@
         ]
       }
     ]
-    try {
-        const gameState = JSON.parse(localStorage.getItem("gameState")) || {};
-    } catch (e) {
-        console.error("解析 JSON 失敗", e);
-    }
-    //const gameState = JSON.parse(localStorage.getItem("gameState")) || {};
+
+    const gameState = localStorage.getItem("levelIndex") || {};
 
     console.log(gameState);
-    renderStar(gameState.levelIndex);
+    renderStar(gameState);
 
     function renderStar(index) {
       const star = stars[index];
@@ -315,8 +311,8 @@
     }
 
     function nextStar() {
-      gameState.levelIndex += 1;
-      localStorage.setItem('gameState', JSON.stringify(gameState));
+      gameState += 1;
+      localStorage.setItem('levelIndex', gameState);
       location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/stage.html";
     }
 
