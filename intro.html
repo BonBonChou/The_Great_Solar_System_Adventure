@@ -277,7 +277,8 @@
       }
     ]
 
-    const levelIndex = localStorage.getItem("levelIndex") || {};
+    let data = JSON.parse(localStorage.getItem("gameState")) || { levelIndex: 0 };
+    let levelIndex = data.levelIndex;
 
     window.addEventListener("DOMContentLoaded", () => { // 畫面載入完成後執行
       console.log(levelIndex);
@@ -285,40 +286,37 @@
     });
 
     function renderStar(index) {
-      if (index) {
-        const star = stars[index];
+      const star = stars[index];
 
-        document.getElementById("knowledge-title").textContent = star.title;
-        document.getElementById("knowledge-text").innerHTML = formatknowledge(star.knowledge);
+      document.getElementById("knowledge-title").textContent = star.title;
+      document.getElementById("knowledge-text").innerHTML = formatknowledge(star.knowledge);
 
-        // 連結處理
-        const linkArea = document.getElementById("info-link");
-        const info = stars[index];
-        const link = info && info.link;
-        if (link) {
-          linkArea.innerHTML = "<p>相關內容</p>";
+      // 連結處理
+      const linkArea = document.getElementById("info-link");
+      const info = stars[index];
+      const link = info && info.link;
+      if (link) {
+        linkArea.innerHTML = "<p>相關內容</p>";
 
-          if (Array.isArray(link)) { // 多個網址
-            link.forEach(l => {
-              linkArea.innerHTML += `<a href="${l.url}" target="_blank" style="display:block; color:#00ccff;">${l.text}</a>`;
-            });
-          }
-          else if (link.url && link.text) { // 單一網址
-            linkArea.innerHTML += `<a href="${link.url}" target="_blank" style="display:block; color:#00ccff;">${link.text}</a>`;
-          }
-          linkArea.classList.remove("hidden");
-        } else { // 沒有網址
-          linkArea.innerHTML = "";
-          linkArea.classList.add("hidden");
+        if (Array.isArray(link)) { // 多個網址
+          link.forEach(l => {
+            linkArea.innerHTML += `<a href="${l.url}" target="_blank" style="display:block; color:#00ccff;">${l.text}</a>`;
+          });
         }
-      } else {
-        document.getElementById("knowledge-text").textContent = "空空空空空";
-      } 
+        else if (link.url && link.text) { // 單一網址
+          linkArea.innerHTML += `<a href="${link.url}" target="_blank" style="display:block; color:#00ccff;">${link.text}</a>`;
+        }
+        linkArea.classList.remove("hidden");
+      } else { // 沒有網址
+        linkArea.innerHTML = "";
+        linkArea.classList.add("hidden");
+      }
     }
 
     function nextStar() {
       levelIndex += 1;
-      localStorage.setItem("levelIndex", levelIndex);
+      data.levelIndex = levelIndex;
+      localStorage.setItem("gameState", JSON.stringify(data));
       location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/stage.html";
     }
 
