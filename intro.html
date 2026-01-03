@@ -279,8 +279,10 @@
 
     const levelIndex = localStorage.getItem("levelIndex") || {};
 
-    console.log(levelIndex);
-    renderStar(levelIndex);
+    window.addEventListener("DOMContentLoaded", () => { // 畫面載入完成後執行
+      console.log(levelIndex);
+      renderStar(levelIndex);
+    });
 
     function renderStar(index) {
       if (index) {
