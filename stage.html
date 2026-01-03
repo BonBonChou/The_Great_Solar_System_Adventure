@@ -897,7 +897,7 @@ body{
    - enabled=false 時完全不影響正常抽樣
 ========================================================= */
 const TEST_FORCE_SHOP = {
-  enabled: false,//true, // 要正常抽就改 false
+  enabled: false, // 要正常抽就改 false
   tools: [
     "一關內每次補給，額外 +3 燃料",
     // "手牌上限+1張",
@@ -905,7 +905,7 @@ const TEST_FORCE_SHOP = {
   consumables: [
     "立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫",
   ],
-  levelIndex: 6,
+  levelIndex: 9,
 
   startHP: null,
   initialHand: [
@@ -2551,7 +2551,7 @@ passContinue.addEventListener('click', ()=>{
   saveProgress();
 
   // 6) 跳知識頁（知識頁用 levelIndex 決定內容）
-  location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/intro1-1.html";
+  location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/intro.html";
 });
 
 
@@ -2642,7 +2642,7 @@ function restartCurrentLevel(){
 /* ===== 遊戲重頭開始（清存檔 + 回到初始狀態） ===== */
 function restartWholeGame(){
   localStorage.removeItem('gameState');
-  location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/stage1-1.html";
+  location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/stage.html";
 }
 
 failRetry.addEventListener('click', restartCurrentLevel);
