@@ -313,7 +313,11 @@
     function nextStar() {
       gameState.levelIndex += 1;
       localStorage.setItem('gameState', JSON.stringify(gameState));
-      location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/stage.html";
+      location.href = resolvePageUrl('stage.html');
+    }
+
+    function resolvePageUrl(path) {
+      return new URL(path, window.location.href).href;
     }
 
     function formatknowledge(knowledge) {
