@@ -277,7 +277,7 @@
       }
     ]
 
-    const gameState = JSON.parse(localStorage.getItem('gameState'));
+    const gameState = JSON.parse(localStorage.getItem("gameState")) || {};
 
     console.log(gameState.levelIndex);
     renderStar(gameState.levelIndex);
