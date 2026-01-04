@@ -1188,16 +1188,17 @@ SUITS.forEach(suit=>{
 ========================================================= */
 let bigStage = 1;          // 大關：1~3
 let hp = 3;
+let maxHP = 0;
 let fuel = 0;
 let coins = 80; // 初始金幣
 let targetFuel = 0;
 let discardsLeft = DISCARD_PER_LEVEL;
 let extraDiscards = 0;
 let supplyCountInStage = 0;  // 本大關補給次數累積，用來扣 HP
+
 let drawPile = [];  // 可抽牌庫（會變）
 let hand = [];      // 手牌（會變）
 let played = [];    // 已出牌（不回牌庫）
-let maxHP = 0;
 let supplyBonusPerClear = 0; // 永久成長：通關累積的補給加成
 let bigStageClearCount = 0;  // 已通過的大關數（可累積）
 
@@ -3166,56 +3167,10 @@ function ownedConsumablesToState(){
   return out;
 }
 
-let globalVars = {
-  // 關卡定位
-  levelIndex,
-  bigStage,
-
-  // 核心數值
-  hp,
-  maxHP,
-  fuel,
-  targetFuel,
-  discardsLeft,
-  extraDiscards,
-  supplyCountInStage,
-  HAND_SIZE,
-  supplyBonusPerClear,
-  bigStageClearCount,
-
-  // 牌堆
-  drawPile,
-  hand,
-  played,
-
-  // 商店 / 經濟
-  coins,
-  shopTools,
-  shopConsumables,
-  ownedTools: ownedToolsToState(),
-  ownedConsumables: ownedConsumablesToState(),
-  tempEffects,
-};
-
-let data = new Proxy({}, {
-  get(target, prop) {
-    if (prop in globalVars) {
-      return globalVars[prop]; // 自動回傳最新全域值
-    }
-    return target[prop];
-  },
-  set(target, prop, value) {
-    if (prop in globalVars) {
-      globalVars[prop] = value; // 改 data[prop] 時也更新全域值
-    } else {
-      target[prop] = value;
-    }
-    return true;
-  }
-});
+let data = {};
 
 function saveProgress(){
-  /*const data = {
+  const datasaved = {
     // 關卡定位
     levelIndex,
     bigStage,
@@ -3244,7 +3199,9 @@ function saveProgress(){
     ownedTools: ownedToolsToState(),
     ownedConsumables: ownedConsumablesToState(),
     tempEffects,
-  };*/
+  };
+
+  data = datasaved;
 
   localStorage.setItem('gameState', JSON.stringify(data));
 }
@@ -3270,8 +3227,9 @@ if(hudLeftEl && 'ResizeObserver' in window){
 }
 
 function boot(){
-  const state = loadProgress();
-  if(state){
+  //const state = loadProgress();
+  const state = data;
+  if(state && Object.keys(state).length > 0){
     applyProgress(state);
     if(shopTools.length === 0 && shopConsumables.length === 0){
       generateShopOffers();
@@ -3288,10 +3246,12 @@ function boot(){
     }
     renderHand();
     updateHUD();
+    console.log(state);
   }else{
     // 沒進度 → 當成新遊戲
     applyTestLevelOverride();
     startLevel();
+    console.log("hi");
   }
 }
 
@@ -3490,10 +3450,7 @@ function renderStar(index) {
 
 function nextStar() {
   levelIndex += 1;
-
-
-  console.log(data.levelIndex);
-  localStorage.getItem('gameState');
+  saveProgress();
   
   document.getElementById("info-screen").classList.add("hidden");
   document.getElementById("game-screen").classList.remove("hidden");
