@@ -1022,7 +1022,7 @@ h4 {
 const TEST_FORCE_SHOP = {
   enabled: true, // 要正常抽就改 false
   tools: [
-    "若補給包含5張牌，當局獲得1次棄牌次數",
+    "手牌上限+1張",
     // "手牌上限+1張",
   ],
   consumables: [
@@ -1253,7 +1253,7 @@ let targetFuel = 0;
 let discardsLeft = DISCARD_PER_LEVEL;
 let extraDiscards = 0;
 let levelExtraDiscards = 0;
-let supplyCountInStage = 0;  // 本大關補給次數累積，用來扣 HP
+let supplyCountInStage = 0;  // 本關補給次數累積，用來扣 HP
 
 let drawPile = [];  // 可抽牌庫（會變）
 let hand = [];      // 手牌（會變）
@@ -2680,8 +2680,9 @@ passContinue.addEventListener('click', ()=>{
 
   updateHUD();
 
-  // 5) 存檔（讓知識頁回來時資料都在
+  // 5) 存檔並重置 fuel
   // !!! 已放棄localStorage存檔方法，因為無法解決origin不同導致讀取不到存入的資料，改成將知識頁併入遊戲頁
+  fuel = 0;
   saveProgress();
 
   // 6) 跳知識頁（知識頁用 levelIndex 決定內容）
@@ -2703,6 +2704,7 @@ const failOverlay = document.getElementById('fail-overlay');
 const failRetry = document.getElementById('fail-retry');
 const failRestart = document.getElementById('fail-restart');
 const failSummary = document.getElementById('fail-summary');
+const failText = document.getElementById('fail-text');
 
 let isFailOpen = false;
 
@@ -2790,11 +2792,25 @@ window.addEventListener('keydown', (e)=>{
   }
 });
 
-function gameOver(){
+function gameOver(reason){
   hp = 0;
+  if(failText){
+    failText.textContent = reason || 'HP 歸零了。要怎麼做？';
+  }
   renderHand();
   updateHUD();
   openFailModal();
+}
+
+function checkNoCardsFail(){
+  if(fuel >= targetFuel){
+    return false;
+  }
+  if((drawPile?.length ?? 0) === 0 && (hand?.length ?? 0) === 0){
+    gameOver('牌庫和手牌都用完了。要怎麼做？');
+    return true;
+  }
+  return false;
 }
 
 /* =========================================================
@@ -2816,7 +2832,7 @@ btnPlay.addEventListener('click', ()=>{
   // ✅ 本次是否 freeSupply（不增加扣血頻率計數）
   const isFreeSupply = (tempEffects.freeSupplyUses > 0);
 
-  // ✅ 這次補給在大關中的「次數」（用來判斷扣血）
+  // ✅ 這次補給在本關中的「次數」（用來判斷扣血）
   const stageCountForThisSupply = supplyCountInStage + (isFreeSupply ? 0 : 1);
 
   // ✅ 結算
@@ -2905,6 +2921,10 @@ btnPlay.addEventListener('click', ()=>{
 
   if(fuel >= targetFuel){
     passLevel();
+    return;
+  }
+  if(checkNoCardsFail()){
+    return;
   }
 });
 
@@ -3512,8 +3532,15 @@ function renderStar(index) {
 }
 
 function nextStar() {
+  const prevStage = LEVELS[levelIndex]?.stage ?? null;
   levelIndex += 1;
   resetLevelState();
+  const nextStage = LEVELS[levelIndex]?.stage ?? null;
+  if(prevStage && nextStage && prevStage !== nextStage){
+    initBigStageResetDeck();
+    hand = [];
+    supplyCountInStage = 0;
+  }
   saveProgress();
 
   document.getElementById("info-screen").classList.add("hidden");
