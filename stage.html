@@ -1022,8 +1022,8 @@ h4 {
 const TEST_FORCE_SHOP = {
   enabled: true, // 要正常抽就改 false
   tools: [
-    "若補給包含5張牌，當局獲得1次棄牌次數",
-    "手牌上限+1張",
+    "最大 HP +1",
+    "每通過一大關，最大 HP +1",
     //"順子牌型每張牌可相差1點",
   ],
   consumables: [
@@ -1840,6 +1840,10 @@ function buyTool(tool){
       drawFromPile(drawCount);
     }
     renderHand();
+    updateHUD();
+  }else if(tool.name === "最大 HP +1"){
+    maxHP = computeMaxHP();
+    hp = Math.min(maxHP, hp + 1);
     updateHUD();
   }
 
@@ -2893,7 +2897,7 @@ btnPlay.addEventListener('click', ()=>{
   drawFromPile(refillCount);
 
 
-  // ✅ 大關補給次數（freeSupply 不增加）
+  // ✅ 本關補給次數（freeSupply 不增加）
   if(isFreeSupply){
     tempEffects.freeSupplyUses -= 1;
   }else{
