@@ -12,7 +12,6 @@ body{
   font-family:'Noto Sans TC',sans-serif;
   color:#fff;
   overflow:hidden;
-  text-align: center;
 }
 
 #game-screen{
@@ -732,8 +731,8 @@ body{
 #fail-actions{
   display:flex;
   gap:10px;
-  justify-content:flex-end;
-  flex-wrap:wrap;
+  flex-direction:column;
+  align-items:center;
 }
 #fail-actions .action-btn{
   width:170px;
@@ -1024,7 +1023,7 @@ const TEST_FORCE_SHOP = {
   consumables: [
     "立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫",
   ],
-  levelIndex: 9,
+  levelIndex: 7,
 
   startHP: null,
   initialHand: [
@@ -2966,7 +2965,7 @@ const RULE_PAGES = [
   {
     title: "丟棄規則",
     body: [
-      "每關丟棄次數上限 3 次 (若無道具情況下)。",
+      "每關丟棄次數上限 3 次 (若無道具加成)。",
       "每次丟棄最多選 5 張牌。",
       "丟棄的牌會重回牌庫，再從牌庫抽牌補滿手牌。"
     ]
