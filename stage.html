@@ -1300,7 +1300,6 @@ function resetLevelState(){
     freeSupplyUses: 0,                    // 消耗品/道具：額外一次補給（不計入扣血頻率）
 
     nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
-    nextRefillMinus: 0,                   // ✅ 因為超上限抽牌，下次補給補牌數 -1（一次性）
     supplyHpOverride: null,
   };
 
@@ -1319,7 +1318,6 @@ let tempEffects = {
   freeSupplyUses: 0,                    // 消耗品/道具：額外一次補給（不計入扣血頻率）
 
   nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
-  nextRefillMinus: 0,                   // ✅ 因為超上限抽牌，下次補給補牌數 -1（一次性）
   supplyHpOverride: null,               // 例如 { per:4 }：本關扣血頻率改 4
 };
 
@@ -2382,9 +2380,6 @@ function useConsumable_Draw2Pick1(){
     drawPile.push(other);
     shuffle(drawPile);
 
-    // ✅ 下次補給補牌數 -1（因為這次手牌多 1）
-    tempEffects.nextRefillMinus = 1;
-
     showToastText('已加入手牌（下次補牌 -1）', 1200);
   });
 }
@@ -2893,11 +2888,9 @@ btnPlay.addEventListener('click', ()=>{
   }
 
   // ✅ 補牌（若有「超上限抽牌」效果 → 下次補牌少 1）
-  const refillMinus = tempEffects.nextRefillMinus || 0;
-  const refillCount = Math.max(0, outCards.length - refillMinus);
+  const targetHandSize = Math.min(HAND_SIZE, HAND_SIZE_MAX);
+  const refillCount = Math.max(0, targetHandSize - hand.length);
   drawFromPile(refillCount);
-  // 一次性：用完清掉
-  if(refillMinus > 0) tempEffects.nextRefillMinus = 0;
 
 
   // ✅ 大關補給次數（freeSupply 不增加）
@@ -3227,7 +3220,6 @@ function applyProgress(state){
       nextSupplyFuelMult: state.tempEffects.nextSupplyFuelMult ?? 1,
       freeSupplyUses: state.tempEffects.freeSupplyUses ?? 0,
       nextSupplyLowHandBonus: state.tempEffects.nextSupplyLowHandBonus ?? 0,
-      nextRefillMinus: state.tempEffects.nextRefillMinus ?? 0,
       supplyHpOverride: state.tempEffects.supplyHpOverride ?? null,
     };
   }
