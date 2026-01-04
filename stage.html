@@ -11,7 +11,6 @@ body{
   background:#000;
   font-family:'Noto Sans TC',sans-serif;
   color:#fff;
-  overflow:hidden;
 }
 
 #game-screen{
@@ -758,6 +757,7 @@ body{
   display: block;
   max-width: 700px;
   margin: auto;
+  text-align: center;
 }
 
 .intro {
@@ -782,9 +782,12 @@ body{
   padding: 0 1em;
   max-width: 700px;
   margin: auto;
-  //text-align: left;
+  text-align: center;
   line-height: 1.5em;
   margin-top: 1em;
+}
+#info-screen .action-btn {
+  align-self: center;
 }
 
 .hidden { display: none; }
@@ -986,15 +989,15 @@ h4 {
       <p id="knowledge-text"></p>
     </div>
     <div id="info-link" class="hidden"></div>
-    <button onclick="nextStar()" class="action-btn">繼續</button>
+    <button onclick="nextStar()" class="action-btn" style="display: block; margin: 0 auto;">繼續</button>
   </div>
 </div>
 
 <!-- =========================================================
    結尾頁
 ========================================================= -->
-<div class="container" class="hidden">
-  <div id="final-screen">
+<div class="container">
+  <div id="final-screen" class="hidden">
     <h1>🌟 遊戲結束！</h1>
     <h4>在這場橫跨太陽系的航行中，<br>你降落過炙熱的行星、<br>也踏上冰封而遙遠的世界，<br>一次次補給燃料。<br>一次次承受宇宙帶來的考驗。<br><br>在這廣袤無垠的宇宙中，<br>每顆星球都有它獨特的樣貌，</h4>
     <h2 id="final-highlight">雖為滄海一粟，<br>卻於渺小中，誕生意義。</h2>
