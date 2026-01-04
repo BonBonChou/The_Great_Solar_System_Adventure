@@ -2578,6 +2578,7 @@ function closePassModal(){
   passOverlay.style.display = 'none';
 
   // 通常通關後會直接跳頁，所以這裡不太會用到
+  setGamePaused(false);
   shopBtn.style.pointerEvents = 'auto';
   rulesBtn.style.pointerEvents = 'auto';
 }
