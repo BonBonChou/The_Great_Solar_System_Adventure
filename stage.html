@@ -124,6 +124,12 @@ body{
 .action-btn.discard:hover{
   background:#ff8a8a;
 }
+.action-btn.sum{
+  background:#5bff71;
+}
+.action-btn.sum:hover{
+  background:#ff8a8a;
+}
 
 /* ===== 卡牌 ===== */
 .card{
@@ -965,6 +971,7 @@ h4 {
       <div id="fail-actions">
         <button id="fail-retry" class="action-btn">本關重新開始</button>
         <button id="fail-restart" class="action-btn discard">遊戲重頭開始</button>
+        <button id="fail-summary" class="action-btn sum">遊戲結算</button>
       </div>
     </div>
   </div>
@@ -2691,6 +2698,7 @@ window.addEventListener('keydown', (e)=>{
 const failOverlay = document.getElementById('fail-overlay');
 const failRetry = document.getElementById('fail-retry');
 const failRestart = document.getElementById('fail-restart');
+const failSummary = document.getElementById('fail-summary');
 
 let isFailOpen = false;
 
@@ -2710,7 +2718,24 @@ function closeFailModal(){
 
   shopBtn.style.pointerEvents = 'auto';
   rulesBtn.style.pointerEvents = 'auto';
+}
 
+function showFinalScreen(scoreLevelIndex){
+  document.getElementById("game-screen").classList.add("hidden");
+  document.getElementById("info-screen").classList.add("hidden");
+  document.getElementById("final-screen").classList.remove("hidden");
+
+  const info = LEVELS[scoreLevelIndex] || LEVELS[0];
+  const stageLabel = `第${stageToChinese(info.stage)}大關`;
+  const scoreText = `你的成績：${stageLabel}——${info.name}`;
+
+  document.getElementById("endscore-display").textContent = scoreText;
+}
+
+function endGameSummary(){
+  closeFailModal();
+  saveProgress();
+  showFinalScreen(levelIndex);
 }
 
 /* ===== 本關重新開始（不動 levelIndex，不動已擁有/金幣/商店貨架） ===== */
@@ -2752,6 +2777,7 @@ function restartWholeGame(){
 
 failRetry.addEventListener('click', restartCurrentLevel);
 failRestart.addEventListener('click', restartWholeGame);
+failSummary.addEventListener('click', endGameSummary);
 
 window.addEventListener('keydown', (e)=>{
   if(e.key === 'Escape' && isFailOpen){
