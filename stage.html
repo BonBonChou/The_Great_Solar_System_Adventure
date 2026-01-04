@@ -964,7 +964,7 @@ body{
 const TEST_FORCE_SHOP = {
   enabled: true, // 要正常抽就改 false
   tools: [
-    "補給 +20 燃料，每次通關後再永久 +2 燃料",
+    "若補給包含5張牌，當局獲得1次棄牌次數",
     // "手牌上限+1張",
   ],
   consumables: [
@@ -1194,6 +1194,7 @@ let coins = 80; // 初始金幣
 let targetFuel = 0;
 let discardsLeft = DISCARD_PER_LEVEL;
 let extraDiscards = 0;
+let levelExtraDiscards = 0;
 let supplyCountInStage = 0;  // 本大關補給次數累積，用來扣 HP
 
 let drawPile = [];  // 可抽牌庫（會變）
@@ -1222,6 +1223,7 @@ let straightPlusSupplyUsedInLevel = false; // 是否已用掉「順子以上首�
 
 function resetLevelState(){
   supplyCountInLevel = 0;
+  levelExtraDiscards = 0;
   usedHandTypesInLevel.clear();
   immuneHitUsedInLevel = false;
   straightPlusSupplyUsedInLevel = false;
@@ -2814,6 +2816,7 @@ btnPlay.addEventListener('click', ()=>{
 
   // ✅ 5張補給 +1棄牌
   if(result.extraDiscards){
+    levelExtraDiscards += result.extraDiscards;
     discardsLeft += result.extraDiscards;
   }
 
@@ -3230,12 +3233,10 @@ function boot(){
     }
     renderHand();
     updateHUD();
-    console.log(state);
   }else{
     // 沒進度 → 當成新遊戲
     applyTestLevelOverride();
     startLevel();
-    console.log("hi");
   }
 }
 
