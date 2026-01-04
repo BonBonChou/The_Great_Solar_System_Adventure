@@ -1307,6 +1307,16 @@ function resetLevelState(){
   discardsLeft = DISCARD_PER_LEVEL + extraDiscards;
 }
 
+function healHp(amount){
+  if(amount <= 0){
+    return;
+  }
+  if(hp >= maxHP){
+    return;
+  }
+  hp = Math.min(maxHP, hp + amount);
+}
+
 // 消耗品 / 暫時效果
 let tempEffects = {
   nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
@@ -1867,7 +1877,7 @@ function buyConsumable(item){
 
   // ✅ 只有這兩個：買了立刻生效（且本來就不可售出）
   if(item.name === "立即回復 2 HP"){
-    hp = Math.min(maxHP, hp + 2);
+    healHp(2);
     updateHUD();
     showToastText('回復 +2 HP', 900);
 
@@ -2074,7 +2084,7 @@ function resolveSupply(outCards, stageCountForThisSupply){
     straightPlusSupplyUsedInLevel = true;
   }
   if(hpGain > 0){
-    hp = Math.min(maxHP, hp + hpGain);
+    healHp(hpGain);
     updateHUD();
   }
 
@@ -2602,7 +2612,7 @@ function startLevel(){
   bigStage = info.stage;
   targetFuel = info.targetFuel;
   maxHP = computeMaxHP();
-  hp = Math.min(hp, maxHP);
+  hp = Math.max(0, hp);
   if(hp <= maxHP) hp = maxHP;
   applyTestStartHp(); // 測試工具
 
