@@ -784,6 +784,40 @@ body{
 
 .hidden { display: none; }
 
+/* =========================================================
+   結尾頁CSS
+========================================================= */
+h4 {
+  font-size: 1.4em;
+  line-height: 1.6;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+@keyframes rainbow {
+  0% { background-position: 100% 50%; }
+  50% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+#final-highlight {
+  font-size: 2em;
+  margin: 1em 0;
+  font-weight: bold;
+  text-align: center;
+  background: linear-gradient(270deg, red, orange, yellow, green, blue, indigo, violet, red);
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rainbow 2s ease infinite;
+}
+
+  .endscore-display {
+  margin-top: 1em;
+  font-size: 1.8em;
+  color: #00ffcc;
+}
+
 </style>
 </head>
 
@@ -950,6 +984,19 @@ body{
   </div>
 </div>
 
+<!-- =========================================================
+   結尾頁
+========================================================= -->
+<div class="container" class="hidden">
+  <div id="final-screen">
+    <h1>🌟 遊戲結束！</h1>
+    <h4>在這場橫跨太陽系的航行中，<br>你降落過炙熱的行星、<br>也踏上冰封而遙遠的世界，<br>一次次補給燃料。<br>一次次承受宇宙帶來的考驗。<br><br>在這廣袤無垠的宇宙中，<br>每顆星球都有它獨特的樣貌，</h4>
+    <h2 id="final-highlight">雖為滄海一粟，<br>卻於渺小中，誕生意義。</h2>
+    <div class="endscore-display" id="endscore-display"></div>
+    <button onclick="restartWholeGame()" class="action-btn">重闖太陽系</button>
+  </div>
+</div>
+
 <script>
 /* =========================================================
    測試用：強制商店一定刷到某些商品 + 開場狀態
@@ -970,7 +1017,7 @@ const TEST_FORCE_SHOP = {
   consumables: [
     "立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫",
   ],
-  levelIndex: 2,
+  levelIndex: 9,
 
   startHP: null,
   initialHand: [
@@ -2699,8 +2746,8 @@ function restartCurrentLevel(){
 
 /* ===== 遊戲重頭開始（清存檔 + 回到初始狀態） ===== */
 function restartWholeGame(){
-  localStorage.removeItem('gameState');
-  location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/stage.html";
+  // localStorage.removeItem('gameState');
+  location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/index.html";
 }
 
 failRetry.addEventListener('click', restartCurrentLevel);
@@ -3191,7 +3238,7 @@ function saveProgress(){
 
   data = datasaved;
 
-  localStorage.setItem('gameState', JSON.stringify(data));
+  //localStorage.setItem('gameState', JSON.stringify(data));
 }
 
 function updateTopUILayout(){
