@@ -1832,6 +1832,13 @@ function buyTool(tool){
     updateHUD();
   }else if(tool.name === "手牌上限+1張"){
     HAND_SIZE = Math.min(HAND_SIZE + 1, HAND_SIZE_MAX);
+    const targetHandSize = Math.min(HAND_SIZE, HAND_SIZE_MAX);
+    const drawCount = Math.max(0, targetHandSize - hand.length);
+    if(drawCount > 0){
+      drawFromPile(drawCount);
+    }
+    renderHand();
+    updateHUD();
   }
 
   // ✅ 若達上限：從本關商店貨架移除（不補貨、不刷新）
