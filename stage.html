@@ -1220,6 +1220,30 @@ let immuneHitUsedInLevel = false;    // 是否已用掉「免疫第一次傷害�
 let freeDiscardUsedInLevel = false;  // 是否用掉「首次棄牌不消耗次數」
 let straightPlusSupplyUsedInLevel = false; // 是否已用掉「順子以上首次補給回復」
 
+function resetLevelState(){
+  supplyCountInLevel = 0;
+  usedHandTypesInLevel.clear();
+  immuneHitUsedInLevel = false;
+  straightPlusSupplyUsedInLevel = false;
+  freeDiscardUsedInLevel = false;
+  tempEffects = {
+    nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
+    nextSupplyHandRankPlus1: 0,           // 消耗品：下一次牌型等級 +1（一次性）
+
+    nextSupplyFuelPctFromDiscard: 0,      // 道具：每棄1張牌，下次補給 +5%（累積到下一次補給後清空）
+    nextSupplyFuelMult: 1,                // 道具：高牌的下次補給 +50%（一次性倍率）
+
+    freeSupplyUses: 0,                    // 消耗品/道具：額外一次補給（不計入扣血頻率）
+
+    nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
+    nextRefillMinus: 0,                   // ✅ 因為超上限抽牌，下次補給補牌數 -1（一次性）
+    supplyHpOverride: null,
+  };
+
+  // 每關重置棄牌次數（只保留永久加成）
+  discardsLeft = DISCARD_PER_LEVEL + extraDiscards;
+}
+
 // 消耗品 / 暫時效果
 let tempEffects = {
   nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
@@ -2511,29 +2535,8 @@ function startLevel(){
   hp = Math.min(hp, maxHP);
   if(hp <= maxHP) hp = maxHP;
   applyTestStartHp(); // 測試工具
-  supplyCountInLevel = 0;
-  usedHandTypesInLevel.clear();
-  immuneHitUsedInLevel = false;
-  straightPlusSupplyUsedInLevel = false;
-  freeDiscardUsedInLevel = false;
-  tempEffects = {
-    nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
-    nextSupplyHandRankPlus1: 0,           // 消耗品：下一次牌型等級 +1（一次性）
 
-    nextSupplyFuelPctFromDiscard: 0,      // 道具：每棄1張牌，下次補給 +5%（累積到下一次補給後清空）
-    nextSupplyFuelMult: 1,                // 道具：高牌的下次補給 +50%（一次性倍率）
-
-    freeSupplyUses: 0,                    // 消耗品/道具：額外一次補給（不計入扣血頻率）
-
-    nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
-    nextRefillMinus: 0,                   // ✅ 因為超上限抽牌，下次補給補牌數 -1（一次性）
-    supplyHpOverride: null,
-  };
-
-
-  // 每關重置棄牌次數
-  discardsLeft = DISCARD_PER_LEVEL + extraDiscards;
-
+  resetLevelState();
 
   initBigStageResetDeck();
 
@@ -2671,28 +2674,9 @@ function restartCurrentLevel(){
   targetFuel = info.targetFuel;
   maxHP = computeMaxHP();
   hp = maxHP;
-  supplyCountInLevel = 0;
-  usedHandTypesInLevel.clear();
-  immuneHitUsedInLevel = false;
-  straightPlusSupplyUsedInLevel = false;
-  freeDiscardUsedInLevel = false;
-  tempEffects = {
-    nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
-    nextSupplyHandRankPlus1: 0,           // 消耗品：下一次牌型等級 +1（一次性）
 
-    nextSupplyFuelPctFromDiscard: 0,      // 道具：每棄1張牌，下次補給 +5%（累積到下一次補給後清空）
-    nextSupplyFuelMult: 1,                // 道具：高牌的下次補給 +50%（一次性倍率）
+  resetLevelState();
 
-    freeSupplyUses: 0,                    // 消耗品/道具：額外一次補給（不計入扣血頻率）
-
-    nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
-    nextRefillMinus: 0,                   // ✅ 因為超上限抽牌，下次補給補牌數 -1（一次性）
-    supplyHpOverride: null,
-  };
-
-
-  // 棄牌、補給計數
-  discardsLeft = DISCARD_PER_LEVEL + extraDiscards;
   supplyCountInStage = 0;
 
   // 手牌上限 HAND_SIZE：目前是「永久道具」會改它，所以重開別動 HAND_SIZE
@@ -3450,7 +3434,7 @@ function renderStar(index) {
 
 function nextStar() {
   levelIndex += 1;
-  discardsLeft = DISCARD_PER_LEVEL + extraDiscards;
+  resetLevelState();
   saveProgress();
   
   document.getElementById("info-screen").classList.add("hidden");
