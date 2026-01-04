@@ -1376,7 +1376,7 @@ const TOOL_DATA = [
   { name:"紅心和方塊視為同花色", price:[32], max:1 },
   { name:"僅需4張牌即可構築順子、同花", price:[48], max:1 },
   { name:"順子牌型每張牌可相差1點", price:[44], max:1 },
-  { name:"若補給包含5張牌，獲得1次棄牌次數", price:[34], max:1 },
+  { name:"若補給包含5張牌，當局獲得1次棄牌次數", price:[34], max:1 },
   { name:"每關首次補給回復 1 HP", price:[24], max:1 },
   { name:"通關時若 HP ≤ 2，回復至 3", price:[20], max:1 },
   { name:"每關每使用一種新牌型，回復 1 HP", price:[36], max:1 },
@@ -2116,7 +2116,7 @@ function resolveSupply(outCards, stageCountForThisSupply){
 
   /* ===== 額外回傳：5張補給 +1棄牌 ===== */
   let extraDiscards = 0;
-  if(ownedTools.has("若補給包含5張牌，獲得1次棄牌次數") && cardCount === 5){
+  if(ownedTools.has("若補給包含5張牌，當局獲得1次棄牌次數") && cardCount === 5){
     extraDiscards += 1;
   }
 
@@ -3450,6 +3450,7 @@ function renderStar(index) {
 
 function nextStar() {
   levelIndex += 1;
+  discardsLeft = DISCARD_PER_LEVEL + extraDiscards;
   saveProgress();
   
   document.getElementById("info-screen").classList.add("hidden");
