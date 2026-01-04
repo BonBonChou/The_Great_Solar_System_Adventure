@@ -12,6 +12,7 @@ body{
   font-family:'Noto Sans TC',sans-serif;
   color:#fff;
   overflow:hidden;
+  text-align: center;
 }
 
 #game-screen{
@@ -735,6 +736,14 @@ body{
 /* =========================================================
    知識頁CSS
 ========================================================= */
+.container {
+  position: relative;
+  max-width: 700px;
+  margin: auto;
+  z-index: 1;
+  padding-top: 5vh;
+}
+
 #knowledge-title {
   font-size: 2em;  /* 你可以依需求調整數值 */
   font-weight: bold; /* 也可以設為 normal, lighter 等 */
@@ -772,6 +781,8 @@ body{
   line-height: 1.5em;
   margin-top: 1em;
 }
+
+.hidden { display: none; }
 
 </style>
 </head>
@@ -928,13 +939,15 @@ body{
 <!-- =========================================================
    知識頁
 ========================================================= -->
-<div id="info-screen" class="hidden">
-  <h3 id="knowledge-title"></h3>
-  <div class="intro">
-    <p id="knowledge-text"></p>
+<div class="container">
+  <div id="info-screen" class="hidden">
+    <h3 id="knowledge-title"></h3>
+    <div class="intro">
+      <p id="knowledge-text"></p>
+    </div>
+    <div id="info-link" class="hidden"></div>
+    <button onclick="nextStar()" class="action-btn">繼續</button>
   </div>
-  <div id="info-link" class="hidden"></div>
-  <button onclick="nextStar()">繼續</button>
 </div>
 
 <script>
@@ -3153,8 +3166,56 @@ function ownedConsumablesToState(){
   return out;
 }
 
+let globalVars = {
+  // 關卡定位
+  levelIndex,
+  bigStage,
+
+  // 核心數值
+  hp,
+  maxHP,
+  fuel,
+  targetFuel,
+  discardsLeft,
+  extraDiscards,
+  supplyCountInStage,
+  HAND_SIZE,
+  supplyBonusPerClear,
+  bigStageClearCount,
+
+  // 牌堆
+  drawPile,
+  hand,
+  played,
+
+  // 商店 / 經濟
+  coins,
+  shopTools,
+  shopConsumables,
+  ownedTools: ownedToolsToState(),
+  ownedConsumables: ownedConsumablesToState(),
+  tempEffects,
+};
+
+let data = new Proxy({}, {
+  get(target, prop) {
+    if (prop in globalVars) {
+      return globalVars[prop]; // 自動回傳最新全域值
+    }
+    return target[prop];
+  },
+  set(target, prop, value) {
+    if (prop in globalVars) {
+      globalVars[prop] = value; // 改 data[prop] 時也更新全域值
+    } else {
+      target[prop] = value;
+    }
+    return true;
+  }
+});
+
 function saveProgress(){
-  const data = {
+  /*const data = {
     // 關卡定位
     levelIndex,
     bigStage,
@@ -3183,7 +3244,7 @@ function saveProgress(){
     ownedTools: ownedToolsToState(),
     ownedConsumables: ownedConsumablesToState(),
     tempEffects,
-  };
+  };*/
 
   localStorage.setItem('gameState', JSON.stringify(data));
 }
@@ -3429,9 +3490,14 @@ function renderStar(index) {
 
 function nextStar() {
   levelIndex += 1;
+
+
+  console.log(data.levelIndex);
+  localStorage.getItem('gameState');
   
   document.getElementById("info-screen").classList.add("hidden");
   document.getElementById("game-screen").classList.remove("hidden");
+  boot();
 }
 
 function formatknowledge(knowledge) {
