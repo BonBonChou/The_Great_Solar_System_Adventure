@@ -3485,10 +3485,16 @@ function nextStar() {
   levelIndex += 1;
   resetLevelState();
   saveProgress();
-  
+
   document.getElementById("info-screen").classList.add("hidden");
-  document.getElementById("game-screen").classList.remove("hidden");
-  boot();
+
+  if (data.levelIndex > 10) {
+    document.getElementById("final-screen").classList.remove("hidden");
+    document.getElementById("endscore-display").textContent = '你的成績：闖出太陽系';
+  } else {
+    document.getElementById("game-screen").classList.remove("hidden");
+    boot();
+  }
 }
 
 function formatknowledge(knowledge) {
