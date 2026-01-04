@@ -787,7 +787,9 @@ body{
   margin-top: 1em;
 }
 #info-screen .action-btn {
-  align-self: center;
+  display: block; /* 變成區塊元素 */
+  margin: 0 auto; /* 自動左右外距，水平置中 */
+  min-width: 120px;
 }
 
 .hidden { display: none; }
@@ -989,7 +991,7 @@ h4 {
       <p id="knowledge-text"></p>
     </div>
     <div id="info-link" class="hidden"></div>
-    <button onclick="nextStar()" class="action-btn" style="display: block; margin: 0 auto;">繼續</button>
+    <button onclick="nextStar()" class="action-btn" >繼續</button>
   </div>
 </div>
 
