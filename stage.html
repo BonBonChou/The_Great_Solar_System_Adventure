@@ -3201,9 +3201,9 @@ function applyProgress(state){
 
   bigStageClearCount = state.bigStageClearCount ?? 0;
 
-  // ✅ HP / maxHP（maxHP 建議也存，但沒存就重算）
-  maxHP = state.maxHP ?? computeMaxHP();
-  hp = state.hp ?? maxHP;
+  // ✅ HP / maxHP（依當前大關重新計算，並把 hp 夾在 0~maxHP）
+  maxHP = computeMaxHP();
+  hp = Math.max(0, state.hp ?? maxHP);
 
   // ✅ 棄牌 / 補給計數 / 手牌上限
   extraDiscards = state.extraDiscards ?? 0;
