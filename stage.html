@@ -3284,8 +3284,8 @@ function updateTopUILayout(){
   if(!hud) return;
 
   const rect = hud.getBoundingClientRect();
-  // 以視窗座標算 HUD 底部，轉成「距離畫面頂部的 px」
-  const bottom = Math.round(rect.bottom);
+  // 以文件座標算 HUD 底部，避免捲動時偏移
+  const bottom = Math.round(rect.bottom + window.scrollY);
 
   document.documentElement.style.setProperty('--hud-bottom', `${bottom}px`);
 }
