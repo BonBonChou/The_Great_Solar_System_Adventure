@@ -1030,7 +1030,7 @@ const TEST_FORCE_SHOP = {
     "下一次補給若為高牌/一對/兩對， +25 燃料",
     "扣血頻率改為4次補給，持續一關",
   ],
-  levelIndex: 0,
+  levelIndex: 5,
 
   startHP: null,
   initialHand: [
@@ -2831,6 +2831,7 @@ btnPlay.addEventListener('click', ()=>{
   const outCards = removeCardsFromHandByIds(ids);
 
   // ✅ 這次補給在本關中的「次數」（用來判斷扣血）
+  supplyCountInStage += 1;
   const stageCountForThisSupply = supplyCountInStage;
 
   // ✅ 結算
