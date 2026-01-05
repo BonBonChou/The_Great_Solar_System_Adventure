@@ -1030,7 +1030,7 @@ const TEST_FORCE_SHOP = {
     "下一次補給若為高牌/一對/兩對， +25 燃料",
     "扣血頻率改為4次補給，持續一關",
   ],
-  levelIndex: 5,
+  levelIndex: 10,
 
   startHP: null,
   initialHand: [
@@ -1253,7 +1253,7 @@ let bigStage = 1;          // 大關：1~3
 let hp = 3;
 let maxHP = 0;
 let fuel = 0;
-let coins = 100; // 初始金幣
+let coins = 10; // 初始金幣
 let targetFuel = 0;
 let discardsLeft = DISCARD_PER_LEVEL;
 let extraDiscards = 0;
@@ -3325,7 +3325,7 @@ function boot(){
   }
 }
 
-localStorage.removeItem('gameState'); // 測試完要刪
+//localStorage.removeItem('gameState'); // 測試完要刪
 boot();
 updateTopUILayout();
 
