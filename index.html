@@ -1,123 +1,3553 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>勇闖太陽系</title>
-  <style>
-    body {
-      margin: 0;
-      background: transparent;
-      //overflow: hidden;
-      font-family: 'Noto Sans TC', sans-serif;
-      color: white;
-      text-align: center;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Card Supply Game</title>
 
-    .hidden { display: none; }
-    button {
-      margin: 1em;
-      padding: 0.75em 2em;
-      font-size: 1.2em;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      background: #1e90ff;
-      color: white;
-      transition: background 0.3s ease;
-    }
-    button:hover { background: #63b3ed; }
+<style>
+body{
+  margin:0;
+  background:#000;
+  font-family:'Noto Sans TC',sans-serif;
+  color:#fff;
+}
 
-    .container {
-      position: relative;
-      z-index: 1;
-      padding-top: 5vh;
-      background-color: rgba(0, 0, 0, 0.8);
-    }
+#game-screen{
+  position:relative;
+  width:100%;
+  height:100vh;
+}
 
-    h1 {
-      font-size: 2.5em;             /* 字體大小 */
-      color: #ffffff;              /* 白色字體比較適合做光暈效果 */
-      font-weight: bold;           /* 粗體 */
-      text-align: center;          /* 置中 */
-      margin-bottom: 35px;         /* 下方留空 */
-      margin-top: 0px;
-      text-shadow: 
-        0 0 5px #00ffff,           /* 淺藍光暈 */
-        0 0 10px #00ffff,
-        0 0 15px #00ffff,
-        0 0 20px #00ffff;
-      /*background-color: #000000;   /* 建議加深背景讓光暈更明顯 */
-      padding: 0px;
-      border-radius: 10px;
-    }
+/* ===== HUD ===== */
+#hud{
+  position:absolute;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:14px;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:wrap;
+  z-index:3;
+  font-size:1.05em;
+}
 
-    h4 {
-      font-size: 1.4em;
-      line-height: 1.6;
-      margin-top: -1em;
-      margin-bottom: 1em;
-      color: #00ffcc;
-    }
+.hud-chip{
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:999px;
+  padding:8px 12px;
+  white-space:nowrap;
+}
 
-    h5 {
-      font-size: 1.2em;
-      line-height: 1.2;
-      margin-top: 0em;
-      margin-bottom: 1em;
-      color: #b5fff0;
-    }
+/* ===== 提示 ===== */
+#toast{
+  position:absolute;
+  bottom: calc(32vh + 2vh + 10px);
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(0,0,0,0.75);
+  padding:0.8em 1.5em;
+  border-radius:12px;
+  font-size:1.2em;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.25s ease;
+  z-index:4;
+}
+#toast.show{ opacity:1; }
 
-    .intro {
-      text-align: justify;
-      margin-bottom: 0em;
-      background: rgba(255,255,255,0.05);
-      padding: 0.5em;
-      border-radius: 10px;
-    }
+/* ===== 手牌區（左手牌 + 右側按鈕） ===== */
+#hand-area{
+  position:absolute;
+  bottom:0;
+  width:100%;
+  height:32vh;
+  display:flex;
+  justify-content:center;
+  align-items:flex-end;
+  padding:0 3vw 2vh;
+  box-sizing:border-box;
+  z-index:2;
+}
 
-    .link-bar {
-      margin-top: 3em;
-      font-size: 0.9em;
-    }
+/* 左邊：手牌容器 */
+#hand-cards{
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  flex:1;
+  min-width:0;
+}
 
-    .link-bar a {
-      color: #66ccff;
-      margin: 0 10px;
-      text-decoration: none;
-    }
+/* 右邊：按鈕欄 */
+#hand-actions{
+  width:92px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  align-items:stretch;
+  margin-left:12px;
+  padding-bottom:0px;
+}
 
-    .link-bar a:hover {
-      text-decoration: underline;
-    }
-  </style>
+/* 按鈕樣式 */
+.action-btn{
+  padding:0.9em 0.2em;
+  font-size:1.1em;
+  border-radius:14px;
+  border:none;
+  cursor:pointer;
+  background:#1e90ff;
+  color:white;
+  transition:background 0.25s ease, transform 0.08s ease, opacity 0.15s ease;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.action-btn:disabled{
+  opacity: 0.45;
+  filter: grayscale(0.2);
+  cursor: not-allowed;
+  transform: none;
+}
+.action-btn:hover{ background:#63b3ed; }
+.action-btn:active{ transform:scale(0.98); }
+
+/* 棄牌 */
+.action-btn.discard{
+  background:#ff5b5b;
+}
+.action-btn.discard:hover{
+  background:#ff8a8a;
+}
+.action-btn.sum{
+  background:#5bff71;
+}
+.action-btn.sum:hover{
+  background:#ff8a8a;
+}
+
+/* ===== 卡牌 ===== */
+.card{
+  position:relative;
+  width:87.5px;
+  height:122.5px;
+  margin-left:-43.5px;
+  transition:transform 0.2s ease;
+}
+.card:first-child{ margin-left:0; }
+
+.card img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  pointer-events:none;
+}
+
+.card.selected{
+  transform:translateY(-30px);
+}
+
+/* 疊放順序（最多 11 張） */
+.card{ z-index:1; }
+.card:nth-child(2){z-index:2}
+.card:nth-child(3){z-index:3}
+.card:nth-child(4){z-index:4}
+.card:nth-child(5){z-index:5}
+.card:nth-child(6){z-index:6}
+.card:nth-child(7){z-index:7}
+.card:nth-child(8){z-index:8}
+.card:nth-child(9){z-index:9}
+.card:nth-child(10){z-index:10}
+.card:nth-child(11){z-index:11}
+
+/* ===== 左上 HUD ===== */
+#hud-left{
+  position:absolute;
+  top:10px;
+  left:12px;
+  right:12px;          /* ✅ 關鍵：不用 width:min(...)，改用左右貼齊 */
+  width:auto;
+  z-index:6;
+  pointer-events:none;
+}
+#hud-left *{ pointer-events:none; }
+
+/* ===== 上排 4 格平均分配，窄螢幕自動變兩行 ===== */
+#hud-toprow{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)); /* ✅ 4 格平均 */
+  gap:10px;
+  align-items:center;
+}
+
+/* 每格吃滿自己的格子 */
+#hud-toprow .hud-chip{
+  width:100%;
+  box-sizing:border-box;
+}
+
+/* 窄螢幕：改成 2 欄 → 兩行（仍然平均） */
+@media (max-width: 520px){
+  #hud-toprow{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.hud-chip{
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:999px;
+  padding:8px 12px;
+  white-space:nowrap;
+  font-size:1.05em;
+  text-align: center;
+}
+
+/* ===== HP 血條 ===== */
+#hp-wrap{
+  margin-top:10px;
+}
+
+#hp-bar{
+  position:relative;
+  height:22px;
+  width:100%;
+  border-radius:999px;
+  background:rgba(255,255,255,0.10);
+  border:1px solid rgba(255,255,255,0.14);
+  overflow:hidden;
+}
+
+#hp-fill{
+  position:absolute;
+  left:0;
+  top:0;
+  height:100%;
+  width:50%;
+  background:rgba(255,70,70,0.85);
+  transition:width 0.25s ease;
+}
+
+#hp-text{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  font-size:0.95em;
+  font-weight:700;
+  color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,0.6);
+  pointer-events:none;
+}
+
+:root{
+  --hud-bottom: 120px;     /* fallback */
+  --hud-gap: 14px;         /* HUD 與下一層的間距 */
+}
+/* ===== 星球名稱（小關） ===== */
+#level-name{
+  position:absolute;
+  top: calc(var(--hud-bottom) + var(--hud-gap));
+  left:50%;
+  transform:translateX(-50%);
+  width:92vw;
+  text-align:center;
+
+  font-size:1.7em;
+  font-weight:800;
+  color:#00ffcc;
+  text-shadow:0 2px 10px rgba(0,0,0,0.45);
+  z-index:6;
+  pointer-events:none;
+}
+
+/* ===== 中央星球圖片 ===== */
+#planet-image{
+  position:absolute;
+  left:50%;
+  top: calc(var(--hud-bottom) + var(--hud-gap) + 160px);
+  transform:translate(-50%,-50%) scale(0.75);
+  width:min(70vw, 440px);
+  height:auto;
+  object-fit:contain;
+  z-index:1;
+  opacity:0.95;
+  pointer-events:none;
+}
+
+/* ===== 商店圖標 ===== */
+#shop-btn{
+  position:absolute;
+  top: calc(var(--hud-bottom) + var(--hud-gap) + 64px); /* 原本 100→164 差 64 */
+  right:12px;
+  width:56px;
+  height:56px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(0,0,0,0.35);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  z-index:5;
+  transition:transform 0.08s ease, background 0.2s ease, opacity 0.2s ease;
+  user-select:none;
+  -webkit-user-select:none;
+}
+#shop-btn:hover{ background:rgba(255,255,255,0.10); }
+#shop-btn:active{ transform:scale(0.97); }
+
+#shop-btn img{
+  width:70%;
+  height:70%;
+  object-fit:contain;
+  pointer-events:none;
+}
+/* ===== 商店 Overlay ===== */
+#shop-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.75);
+  z-index:999;
+  display:none;
+}
+#shop-overlay.show{ display:block; }
+
+#shop-panel{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:min(92vw, 720px);
+  height:min(82vh, 860px);
+  background:rgba(10,10,14,0.95);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 20px 70px rgba(0,0,0,0.6);
+  display:flex;
+  flex-direction:column;
+}
+
+/* 上方標題列（含關閉） */
+.shop-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.10);
+}
+.shop-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.shop-coin{
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(255,255,255,0.06);
+  color:#ffd24e;
+  font-weight:700;
+  white-space:nowrap;
+}
+.shop-title{
+  font-size:1.2em;
+  font-weight:700;
+  color:#00ffcc;
+}
+.shop-close{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(255,255,255,0.06);
+  color:#fff;
+  cursor:pointer;
+}
+.shop-close:active{ transform:scale(0.98); }
+
+/* 分頁列（像瀏覽器 tabs） */
+.tabs{
+  display:flex;
+  gap:8px;
+  padding:10px 10px 0;
+  background:rgba(255,255,255,0.03);
+}
+.tab{
+  flex:1;
+  padding:10px 8px;
+  border-radius:14px 14px 0 0;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.05);
+  color:#fff;
+  cursor:pointer;
+  font-size:1.05em;
+}
+.tab.active{
+  background:rgba(0,255,204,0.12);
+  border-color:rgba(0,255,204,0.28);
+  color:#b5fff0;
+}
+
+/* 內容區 */
+.shop-body{
+  flex:1;
+  padding:12px 12px 14px;
+  overflow:auto;
+}
+
+/* 次分頁（已擁有內的第二層 tabs） */
+.subtabs{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+  margin-bottom:10px;
+}
+.subtab{
+  flex:1;
+  padding:10px 8px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.05);
+  color:#fff;
+  cursor:pointer;
+  font-size:1.0em;
+}
+.subtab.active{
+  background:rgba(30,144,255,0.18);
+  border-color:rgba(30,144,255,0.35);
+}
+
+/* 商品格子 */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:10px;
+}
+
+.item-card{
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.05);
+  border-radius:14px;
+  padding:10px;
+  min-height:88px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.item-name{
+  font-weight:700;
+  font-size:1.05em;
+}
+.item-desc{
+  font-size:0.95em;
+  line-height:1.35;
+  color:rgba(255,255,255,0.85);
+}
+.item-meta{
+  margin-top:auto;
+  font-size:0.9em;
+  color:rgba(0,255,204,0.85);
+}
+.item-unsellable{
+  color: rgba(255,255,255,0.45);
+  font-size: 0.9em;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* 手機更窄時：改 1 欄 */
+@media (max-width: 420px){
+  .grid{ grid-template-columns:1fr; }
+}
+
+/* ===== 確認視窗 ===== */
+#confirm-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.45);
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#confirm-box{
+  width:min(86vw, 520px);
+  background:rgba(10,10,14,0.96);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:16px;
+  padding:16px 14px;
+  box-shadow:0 18px 60px rgba(0,0,0,0.65);
+}
+
+#confirm-text{
+  font-size:1.15em;
+  line-height:1.5;
+  margin-bottom:14px;
+}
+
+#confirm-actions{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+}
+#confirm-actions .action-btn{
+  width:110px;
+}
+
+/* ===== 規則圖標（放在商店下面） ===== */
+#rules-btn{
+  position:absolute;
+  top: calc(var(--hud-bottom) + var(--hud-gap));
+  right:12px;
+  width:56px;
+  height:56px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(0,0,0,0.35);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  z-index:5;
+  transition:transform 0.08s ease, background 0.2s ease, opacity 0.2s ease;
+  user-select:none;
+  -webkit-user-select:none;
+}
+#rules-btn:hover{ background:rgba(255,255,255,0.10); }
+#rules-btn:active{ transform:scale(0.97); }
+
+#rules-btn img{
+  width:70%;
+  height:70%;
+  object-fit:contain;
+  pointer-events:none;
+}
+
+/* ===== 規則 Overlay（同商店風格/尺寸） ===== */
+#rules-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.75);
+  z-index:999;
+  display:none;
+}
+#rules-overlay.show{ display:block; }
+
+#rules-panel{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:min(92vw, 720px);
+  height:min(82vh, 860px);
+  background:rgba(10,10,14,0.95);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 20px 70px rgba(0,0,0,0.6);
+  display:flex;
+  flex-direction:column;
+}
+
+.rules-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.10);
+}
+.rules-title{
+  font-size:1.2em;
+  font-weight:700;
+  color:#00ffcc;
+}
+.rules-close{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(255,255,255,0.06);
+  color:#fff;
+  cursor:pointer;
+}
+.rules-close:active{ transform:scale(0.98); }
+
+.rules-body{
+  flex:1;
+  padding:14px 14px 10px;
+  overflow:auto;
+  font-size:1.1em;
+  line-height:1.6;
+  color:rgba(255,255,255,0.92);
+}
+
+.rules-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 14px;
+  border-top:1px solid rgba(255,255,255,0.10);
+}
+.rules-footer .action-btn{
+  width:140px;
+}
+
+#rules-page-indicator{
+  flex:1;
+  text-align:center;
+  font-size:1.2em;
+  opacity:0.75;
+  pointer-events:none;
+}
+
+.rules-table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  overflow:hidden;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(255,255,255,0.05);
+}
+
+.rules-table th,
+.rules-table td{
+  padding:10px 10px;
+  border-bottom:1px solid rgba(255,255,255,0.10);
+  font-size:0.98em;
+}
+
+.rules-table th{
+  text-align:left;
+  color:#b5fff0;
+  background:rgba(0,255,204,0.10);
+  font-weight:800;
+}
+
+.rules-table tr:last-child td{
+  border-bottom:none;
+}
+
+.rules-table td{
+  color:rgba(255,255,255,0.92);
+}
+
+.rules-table .num{
+  text-align:middle;
+  white-space:nowrap;
+  color:#ffd24e;
+  font-weight:800;
+}
+
+/* ===== 通關彈窗 ===== */
+#pass-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.45);
+  z-index:1001;             /* 比 confirm-overlay 高一點，避免互蓋 */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#pass-box{
+  width:min(86vw, 520px);
+  background:rgba(10,10,14,0.96);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:16px;
+  padding:16px 14px;
+  box-shadow:0 18px 60px rgba(0,0,0,0.65);
+}
+
+#pass-title{
+  text-align: center;
+  font-size:1.35em;
+  font-weight:900;
+  color:#00ffcc;
+  margin-bottom:10px;
+}
+
+#pass-text{
+  text-align: center;
+  font-size:1.1em;
+  line-height:1.6;
+  opacity:0.92;
+  margin-bottom:14px;
+}
+
+#pass-actions{
+  display:flex;
+  justify-content:center;
+}
+#pass-actions .action-btn{
+  width:140px;
+}
+
+/* ===== 失敗彈窗 ===== */
+#fail-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.55);
+  z-index:1002; /* 高於通關/confirm */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#fail-box{
+  width:min(90vw, 560px);
+  background:rgba(10,10,14,0.96);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:16px;
+  padding:16px 14px;
+  box-shadow:0 18px 60px rgba(0,0,0,0.70);
+}
+
+#fail-title{
+  text-align: center;
+  font-size:1.35em;
+  font-weight:900;
+  color:#ff8a8a;
+  margin-bottom:10px;
+}
+
+#fail-text{
+  text-align: center;
+  font-size:1.1em;
+  line-height:1.6;
+  opacity:0.92;
+  margin-bottom:14px;
+}
+
+#fail-actions{
+  display:flex;
+  gap:10px;
+  flex-direction:column;
+  align-items:center;
+}
+#fail-actions .action-btn{
+  width:170px;
+}
+
+/* =========================================================
+   知識頁CSS
+========================================================= */
+.container {
+  position: relative;
+  max-width: 700px;
+  margin: auto;
+  z-index: 1;
+  padding-top: 5vh;
+}
+
+#knowledge-title {
+  font-size: 2em;  /* 你可以依需求調整數值 */
+  font-weight: bold; /* 也可以設為 normal, lighter 等 */
+  margin-bottom: 1em;
+  color: #00ffcc;
+  margin-top: 0.5em;
+  display: block;
+  max-width: 700px;
+  margin: auto;
+  text-align: center;
+}
+
+.intro {
+  margin-bottom: 0em;
+  width: fit-content;     /* 核心：自動根據內容寬度調整 */
+  background: rgba(0,0,0,0.5);
+  padding: 0.5em;
+  border-radius: 10px;
+}
+
+#knowledge-text {
+  font-size: 1.5em;
+  line-height: 1.6;
+  margin-bottom: 1em;
+  text-align: justify;
+  padding: 0 1em;
+  max-width: 700px;
+  margin: auto;
+}
+
+#info-link {
+  padding: 0 1em;
+  max-width: 700px;
+  margin: auto;
+  text-align: center;
+  line-height: 1.5em;
+  margin-top: 1em;
+}
+#info-screen .action-btn {
+  display: block; /* 變成區塊元素 */
+  margin: 0 auto; /* 自動左右外距，水平置中 */
+  min-width: 120px;
+}
+
+.hidden { display: none; }
+
+/* =========================================================
+   結尾頁CSS
+========================================================= */
+h4 {
+  font-size: 1.4em;
+  line-height: 1.6;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+@keyframes rainbow {
+  0% { background-position: 100% 50%; }
+  50% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+#final-highlight {
+  font-size: 2em;
+  margin: 1em 0;
+  font-weight: bold;
+  text-align: center;
+  background: linear-gradient(270deg, red, orange, yellow, green, blue, indigo, violet, red);
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rainbow 2s ease infinite;
+}
+
+  .endscore-display {
+  margin-top: 1em;
+  font-size: 1.8em;
+  color: #00ffcc;
+}
+
+</style>
 </head>
+
 <body>
 
-  <div class="container">
-    <div id="start-screen">
-      <h1>勇闖太陽系</h1>
-      <h4>燃料有限，宇宙無情<br>闖出屬於你的太陽系航道！</h4>
-      <div class="intro">
-        <h5>你是一名來自外星的探險者，正駕駛著太空船深入太陽系。每降落一顆星球，惡劣的環境都會不斷損耗飛船，你必須在船體完全損壞前，成功補充足夠的燃料，才能啟程前往下一站。</h5>
-        <h5>宇宙劇場同名電影《勇闖太陽系》的故事化為這款小遊戲。帶你從觀眾變成探險者，在太陽系中一步步突破極限。</h5>
-        <h5>在宇宙中，知識就是你最可靠的燃料！</h5>
-        <h3>🔍 遊戲說明</h3>
-        <p>🌌 <strong>背景故事</strong><br>你駕駛著太空船，依序降落在太陽系中的各個星球。每顆星球都有不同的環境與特性，飛船會隨時間逐漸受損，必須靠補給燃料才能順利離開。</p>
-        <p>🧠 <strong>玩法簡介</strong><br>見遊戲畫面右上方規則(書本圖示)。</p>
-        <p>🏆 <strong>目標與結局</strong><br>成功補充燃料、撐過星球的考驗，一步步突破太陽系，完成這場屬於你的星際冒險！</p>
-      </div>
-      <p>註：本遊戲介面設計以手機使用者為主，於電腦瀏覽時部分內容可能無法完整顯示。</p>
-      <button onclick="startGame()">開始探險</button>
+<div id="game-screen">
+  <!-- ===== 左上 HUD（大關/燃料/棄牌 + 血條 + 星球名） ===== -->
+  <div id="hud-left">
+    <div id="hud-toprow">
+      <div class="hud-chip" id="hud-stage-text">第一大關</div>
+      <div class="hud-chip">燃料：<span id="hud-fuel">0</span>/<span id="hud-target">0</span></div>
+      <div class="hud-chip">棄牌：<span id="hud-discards">0</span></div>
+      <div class="hud-chip">牌庫：<span id="hud-deck">0</span></div>
     </div>
-    
+
+    <div id="hp-wrap">
+      <div id="hp-bar">
+        <div id="hp-fill"></div>
+        <div id="hp-text">HP: 0/0</div>
+      </div>
+    </div>
+  </div>
+  <div id="level-name">（星球名稱）</div>
+
+  <!-- ===== 畫面中央星球圖 ===== -->
+  <img id="planet-image" src="" alt="planet">
+
+  <div id="shop-btn" title="商店">
+    <img id="shop-icon" src="https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/shop.png" alt="shop">
   </div>
 
-  <script>
-    function startGame() {
-      location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/stage.html";
+  <div id="rules-btn" title="規則">
+    <img id="rules-icon" src="https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/rules.png" alt="rules">
+  </div>
+
+
+  <div id="toast"></div>
+
+  <div id="hand-area">
+    <div id="hand-cards"></div>
+
+    <div id="hand-actions">
+      <button id="btn-play" class="action-btn">補給</button>
+      <button id="btn-discard" class="action-btn discard">丟棄</button>
+    </div>
+  </div>
+
+  <!-- ===== 商店 Overlay ===== -->
+  <div id="shop-overlay">
+    <div id="shop-panel">
+
+      <div class="shop-header">
+        <div class="shop-title">商店</div>
+        <div class="shop-right">
+          <div class="shop-coin">金幣：<span id="shop-coin">0</span></div>
+          <button id="shop-close" class="shop-close">✕</button>
+        </div>
+      </div>
+
+      <!-- 第一層分頁：道具 / 消耗品 / 已擁有 -->
+      <div class="tabs">
+        <button class="tab active" data-tab="tab-tools">道具</button>
+        <button class="tab" data-tab="tab-consumables">消耗品</button>
+        <button class="tab" data-tab="tab-owned">已擁有</button>
+      </div>
+
+      <div class="shop-body">
+        <!-- 道具分頁內容 -->
+        <div id="tab-tools" class="tab-page">
+          <div class="grid" id="tools-grid"></div>
+        </div>
+
+        <!-- 消耗品分頁內容 -->
+        <div id="tab-consumables" class="tab-page" style="display:none;">
+          <div class="grid" id="consumables-grid"></div>
+        </div>
+
+        <!-- 已擁有分頁內容（含第二層 tabs） -->
+        <div id="tab-owned" class="tab-page" style="display:none;">
+          <div class="subtabs">
+            <button class="subtab active" data-subtab="owned-tools">道具</button>
+            <button class="subtab" data-subtab="owned-consumables">消耗品</button>
+          </div>
+
+          <div id="owned-tools" class="owned-page">
+            <div class="grid" id="owned-tools-grid"></div>
+          </div>
+
+          <div id="owned-consumables" class="owned-page" style="display:none;">
+            <div class="grid" id="owned-consumables-grid"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===== 出售確認視窗 ===== -->
+    <div id="confirm-overlay" style="display:none;">
+      <div id="confirm-box">
+        <div id="confirm-text">是否出售XXX</div>
+        <div id="confirm-actions">
+          <button id="confirm-no" class="action-btn discard">否</button>
+          <button id="confirm-yes" class="action-btn">是</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 規則 Overlay ===== -->
+  <div id="rules-overlay">
+    <div id="rules-panel">
+
+      <div class="rules-header">
+        <div class="rules-title">玩法介紹</div>
+        <button id="rules-close" class="rules-close">✕</button>
+      </div>
+
+      <div class="rules-body" id="rules-body"></div>
+
+      <div class="rules-footer">
+        <button id="rules-prev" class="action-btn discard">上一頁</button>
+        <div id="rules-page-indicator">第 1 / 3 頁</div>
+        <button id="rules-next" class="action-btn">下一頁</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== 通關彈窗 ===== -->
+  <div id="pass-overlay" style="display:none;">
+    <div id="pass-box">
+      <div id="pass-title">通關！</div>
+      <div id="pass-text"></div>
+      <div id="pass-actions">
+        <button id="pass-continue" class="action-btn">繼續</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 失敗彈窗 ===== -->
+  <div id="fail-overlay" style="display:none;">
+    <div id="fail-box">
+      <div id="fail-title">失敗...</div>
+      <div id="fail-text">HP 歸零了。要怎麼做？</div>
+      <div id="fail-actions">
+        <button id="fail-retry" class="action-btn">本關重新開始</button>
+        <button id="fail-restart" class="action-btn discard">遊戲重頭開始</button>
+        <button id="fail-summary" class="action-btn sum">遊戲結算</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+   知識頁
+========================================================= -->
+<div class="container">
+  <div id="info-screen" class="hidden">
+    <h3 id="knowledge-title"></h3>
+    <div class="intro">
+      <p id="knowledge-text"></p>
+    </div>
+    <div id="info-link" class="hidden"></div>
+    <button onclick="nextStar()" class="action-btn" >繼續</button>
+  </div>
+</div>
+
+<!-- =========================================================
+   結尾頁
+========================================================= -->
+<div class="container">
+  <div id="final-screen" class="hidden">
+    <h1>🌟 遊戲結束！</h1>
+    <h4>在這場橫跨太陽系的航行中，<br>你降落過炙熱的行星、<br>也踏上冰封而遙遠的世界，<br>一次次補給燃料。<br>一次次承受宇宙帶來的考驗。<br><br>在這廣袤無垠的宇宙中，<br>每顆星球都有它獨特的樣貌，</h4>
+    <h2 id="final-highlight">雖為滄海一粟，<br>卻於渺小中，誕生意義。</h2>
+    <div class="endscore-display" id="endscore-display"></div>
+    <button onclick="restartWholeGame()" class="action-btn">重闖太陽系</button>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   測試用：強制商店一定刷到某些商品 + 開場狀態
+   - tools: 會被塞進 shopTools（道具 8 格）
+   - consumables: 會被塞進 shopConsumables（消耗品 2 格）
+   - levelIndex: 指定關卡（0=水星, 1=金星...）
+   - startHP: 指定當前血量（會被夾在 0~maxHP）
+   - initialHand: 指定第一輪手牌（補給後照樣正常抽）
+     - 格式可用 ["SA","D2"] 或 [{suit:"S",rank:"A"}]
+   - enabled=false 時完全不影響正常抽樣
+========================================================= */
+const TEST_FORCE_SHOP = {
+  enabled: true, // 要正常抽就改 false
+  tools: [
+    "在【極端低溫】星球的首次補給 +15 燃料",
+    "若本關未使用棄牌，通關金幣 +30%",
+    //"順子牌型每張牌可相差1點",
+  ],
+  consumables: [
+    "下一次補給若為高牌/一對/兩對， +25 燃料",
+    "扣血頻率改為4次補給，持續一關",
+  ],
+  levelIndex: 5,
+
+  startHP: null,
+  initialHand: [
+    { suit:'D', rank:'A'},
+    { suit:'D', rank:'K'},
+    { suit:'D', rank:'Q'},
+    { suit:'D', rank:'J'},
+    { suit:'D', rank:'T'},
+    { suit:'S', rank:'A'},
+    { suit:'D', rank:'9'},
+    ],
+};
+function findToolByName(name){
+  return TOOL_DATA.find(t => t.name === name) || null;
+}
+function findConsumableByName(name){
+  return CONSUMABLE_DATA.find(c => c.name === name) || null;
+}
+function normalizeCardSpec(spec){
+  if(!spec) return null;
+  if(typeof spec === 'string'){
+    const trimmed = spec.trim().toUpperCase();
+    if(trimmed.length !== 2) return null;
+    const suit = trimmed[0];
+    const rank = trimmed[1];
+    return { suit, rank };
+  }
+  if(typeof spec === 'object' && spec.suit && spec.rank){
+    return { suit: String(spec.suit).toUpperCase(), rank: String(spec.rank).toUpperCase() };
+  }
+  return null;
+}
+function applyTestLevelOverride(){
+  if(!TEST_FORCE_SHOP?.enabled) return;
+  if(Number.isInteger(TEST_FORCE_SHOP.levelIndex)){
+    const idx = Math.max(0, Math.min(LEVELS.length - 1, TEST_FORCE_SHOP.levelIndex));
+    levelIndex = idx;
+    return;
+  }
+}
+function applyTestStartHp(){
+  if(!TEST_FORCE_SHOP?.enabled) return;
+  if(TEST_FORCE_SHOP.startHP == null) return;
+  const value = Number(TEST_FORCE_SHOP.startHP);
+  if(Number.isNaN(value)) return;
+  hp = Math.min(maxHP, Math.max(0, value));
+}
+function applyTestInitialHand(){
+  if(!TEST_FORCE_SHOP?.enabled) return false;
+  if(!Array.isArray(TEST_FORCE_SHOP.initialHand) || TEST_FORCE_SHOP.initialHand.length === 0){
+    return false;
+  }
+  hand = [];
+  TEST_FORCE_SHOP.initialHand.forEach(spec=>{
+    const cardSpec = normalizeCardSpec(spec);
+    if(!cardSpec) return;
+    const idx = drawPile.findIndex(c => c.suit === cardSpec.suit && c.rank === cardSpec.rank);
+    if(idx < 0) return;
+    hand.push(drawPile.splice(idx, 1)[0]);
+  });
+  return true;
+}
+function forceInjectShopOffers(){
+  if(!TEST_FORCE_SHOP?.enabled) return;
+  
+  // ===== 道具：強制塞進 8 格 =====
+  if(Array.isArray(TEST_FORCE_SHOP.tools) && TEST_FORCE_SHOP.tools.length){
+    TEST_FORCE_SHOP.tools.forEach(name=>{
+      const def = findToolByName(name);
+      if(!def) return;
+
+      // 已售罄就不塞（避免測試時卡住）
+      if(isToolSoldOut(def)) return;
+
+      // 已在貨架上就跳過
+      if(shopTools.some(t => t.name === def.name)) return;
+
+      // 塞進去：放最前面
+      shopTools.unshift(def);
+
+      // 超過 8 格就砍掉最後一個（避免砍到剛塞的）
+      if(shopTools.length > 8) shopTools.pop();
+    });
+
+    // 仍確保固定道具在最後
+    const nonFixedPart = shopTools.filter(t=>!t.fixed);
+    const fixedPart = shopTools.filter(t=>t.fixed);
+    shopTools = [...nonFixedPart, ...fixedPart].slice(0,8);
+  }
+
+  // ===== 消耗品：強制塞進 2 格 =====
+  if(Array.isArray(TEST_FORCE_SHOP.consumables) && TEST_FORCE_SHOP.consumables.length){
+    TEST_FORCE_SHOP.consumables.forEach(name=>{
+      const def = findConsumableByName(name);
+      if(!def) return;
+
+      // 已在貨架上就跳過
+      if(shopConsumables.some(c => c.name === def.name)) return;
+
+      // 塞進去：放最前面
+      shopConsumables.unshift(def);
+
+      // 超過 2 格就砍掉最後一個
+      if(shopConsumables.length > 2) shopConsumables.pop();
+    });
+  }
+}
+
+/* =========================================================
+   規格可調區
+========================================================= */
+let HAND_SIZE = 8;                 // 可由道具升到 11
+const HAND_SIZE_MAX = 11;
+const MAX_SELECT = 5;
+
+const CARD_IMAGE_PATH = 'https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/';
+
+// 每關棄牌次數（預設 3 次）
+const DISCARD_PER_LEVEL = 3;
+
+// 大關補給扣 HP 規則：每 N 次補給扣 1 HP
+const SUPPLY_PER_HP_BY_STAGE = { 1: 3, 2: 2, 3: 1 };
+
+const FUEL_BY_HANDTYPE = {
+  "高牌": 15,
+  "一對": 25,
+  "兩對": 35,
+  "三條": 45,
+  "順子": 55,
+  "同花": 60,
+  "葫蘆": 70,
+  "鐵支": 130,
+  "同花順": 220,
+  "皇家同花順": 350
+};
+const HAND_TYPE_ORDER = [
+  "高牌","一對","兩對","三條","順子","同花","葫蘆","鐵支","同花順","皇家同花順"
+];
+
+const PLANET_HANDTYPE_BONUS = {
+  "兩對": ["艾歐", "歐羅巴"],
+  "三條": ["冥王星"],
+  "順子": ["水星", "金星", "地球", "火星"],
+  "同花": ["天王星", "海王星"],
+  "葫蘆": ["木星", "土星"]
+};
+
+/* ===== 關卡資料 =====
+   
+=========================*/
+const STAGE_INFO = {
+  1: { baseMaxHP: 10 },
+  2: { baseMaxHP: 8 },
+  3: { baseMaxHP: 6 }
+};
+
+const LEVELS = [
+  // 第一大關
+  { stage:1, name:"水星", targetFuel:60, passCoins:10, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/mercury.png", traits:["極端溫差","稀薄/缺乏大氣"] },
+  { stage:1, name:"金星", targetFuel:70, passCoins:12, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/venus.png", traits:["高壓環境","地質高度活躍"] },
+  { stage:1, name:"地球", targetFuel:80, passCoins:14, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/earth.png", traits:["地質高度活躍","可能存在生命"] },
+  { stage:1, name:"火星", targetFuel:90, passCoins:16, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/mars.png", traits:["極端溫差","稀薄/缺乏大氣"] },
+
+  // 第二大關
+  { stage:2, name:"木星", targetFuel:140, passCoins:22, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/jupiter.png", traits:["高壓環境","極端氣候"] },
+  { stage:2, name:"艾歐", targetFuel:160, passCoins:25, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/io.png", traits:["稀薄/缺乏大氣","地質高度活躍","極端低溫"] },
+  { stage:2, name:"歐羅巴", targetFuel:175, passCoins:28, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/europa.png", traits:["稀薄/缺乏大氣","可能存在生命","極端低溫"] },
+  { stage:2, name:"土星", targetFuel:190, passCoins:32, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/saturn.png", traits:["高壓環境"] },
+
+  // 第三大關
+  { stage:3, name:"天王星", targetFuel:210, passCoins:45, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/uranus.png", traits:["極端低溫"] },
+  { stage:3, name:"海王星", targetFuel:230, passCoins:50, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/neptune.png", traits:["極端氣候","極端低溫"] },
+  { stage:3, name:"冥王星", targetFuel:250, passCoins:60, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/pluto.png", traits:["稀薄/缺乏大氣","地質高度活躍","極端低溫"] },
+];
+
+// 目前關卡
+let levelIndex = 0; // 0=水星，1=金星...
+
+/* =========================================================
+   DOM
+========================================================= */
+const toast = document.getElementById('toast');
+
+const handCards = document.getElementById('hand-cards');
+const btnPlay = document.getElementById('btn-play');
+const btnDiscard = document.getElementById('btn-discard');
+
+const hudStageText = document.getElementById('hud-stage-text');
+const hudFuel = document.getElementById('hud-fuel');
+const hudDeck = document.getElementById('hud-deck');
+const hudTarget = document.getElementById('hud-target');
+const hudDiscards = document.getElementById('hud-discards');
+const hpFill = document.getElementById('hp-fill');
+const hpText = document.getElementById('hp-text');
+const levelNameEl = document.getElementById('level-name');
+const planetImageEl = document.getElementById('planet-image');
+
+
+/* =========================================================
+   牌庫定義（52 張）
+========================================================= */
+const SUITS = ['S','H','D','C'];
+const RANKS = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+let deck = [];
+
+SUITS.forEach(suit=>{
+  RANKS.forEach(rank=>{
+    deck.push({
+      suit: suit,
+      rank: rank,
+      img: `${suit}${rank}.png`
+    });
+  });
+});
+
+/* =========================================================
+   遊戲狀態
+========================================================= */
+let bigStage = 1;          // 大關：1~3
+let hp = 3;
+let maxHP = 0;
+let fuel = 0;
+let coins = 10; // 初始金幣
+let targetFuel = 0;
+let discardsLeft = DISCARD_PER_LEVEL;
+let extraDiscards = 0;
+let levelExtraDiscards = 0;
+let supplyCountInStage = 0;  // 本關補給次數累積，用來扣 HP
+
+let drawPile = [];  // 可抽牌庫（會變）
+let hand = [];      // 手牌（會變）
+let played = [];    // 已出牌（不回牌庫）
+let supplyBonusPerClear = 0; // 永久成長：通關累積的補給加成
+let bigStageClearCount = 0;  // 已通過的大關數（可累積）
+
+function computeMaxHP(){
+  // 基礎血量取決於大關（10/8/6）
+  const base = STAGE_INFO[bigStage]?.baseMaxHP ?? 10;
+
+  const maxHpToolCount = ownedTools.get("最大 HP +1")?.count ?? 0;
+  const perStageToolCount = ownedTools.get("每通過一大關，最大 HP +1")?.count ?? 0;
+  const bonus = maxHpToolCount + (bigStageClearCount * perStageToolCount);
+
+  return base + bonus;
+}
+
+// ===== 本關內狀態（不存檔）=====
+let supplyCountInLevel = 0;          // 本關第幾次補給
+let usedHandTypesInLevel = new Set();// 本關已用過的牌型
+let immuneHitUsedInLevel = false;    // 是否已用掉「免疫第一次傷害」
+let freeDiscardUsedInLevel = false;  // 是否用掉「首次棄牌不消耗次數」
+let straightPlusSupplyUsedInLevel = false; // 是否已用掉「順子以上首次補給回復」
+
+function resetLevelState(){
+  supplyCountInLevel = 0;
+  levelExtraDiscards = 0;
+  usedHandTypesInLevel.clear();
+  immuneHitUsedInLevel = false;
+  straightPlusSupplyUsedInLevel = false;
+  freeDiscardUsedInLevel = false;
+  tempEffects = {
+    nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
+    nextSupplyHandRankPlus1: 0,           // 消耗品：下一次牌型等級 +1（一次性）
+
+    nextSupplyFuelPctFromDiscard: 0,      // 道具：每棄1張牌，下次補給 +5%（累積到下一次補給後清空）
+    nextSupplyFuelMult: 1,                // 道具：高牌的下次補給 +50%（一次性倍率）
+
+    nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
+    supplyHpOverride: null,
+  };
+
+  // 每關重置棄牌次數（只保留永久加成）
+  discardsLeft = DISCARD_PER_LEVEL + extraDiscards;
+}
+
+function healHp(amount){
+  if(amount <= 0){
+    return;
+  }
+  if(hp >= maxHP){
+    return;
+  }
+  hp = Math.min(maxHP, hp + amount);
+}
+
+// 消耗品 / 暫時效果
+let tempEffects = {
+  nextSupplyNoRemove: false,            // 消耗品：下一次補給用的牌全部不移除（一次性）
+  nextSupplyHandRankPlus1: 0,           // 消耗品：下一次牌型等級 +1（一次性）
+
+  nextSupplyFuelPctFromDiscard: 0,      // 道具：每棄1張牌，下次補給 +5%（累積到下一次補給後清空）
+  nextSupplyFuelMult: 1,                // 道具：高牌的下次補給 +50%（一次性倍率）
+
+  nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
+  supplyHpOverride: null,               // 例如 { per:4 }：本關扣血頻率改 4
+};
+
+
+/* =========================================================
+   排序（點數優先，花色 S→H→D→C）
+========================================================= */
+const RANK_ORDER = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+const SUIT_ORDER = ['S','H','D','C'];
+
+function sortHand(arr){
+  arr.sort((a,b)=>{
+    const ra = RANK_ORDER.indexOf(a.rank);
+    const rb = RANK_ORDER.indexOf(b.rank);
+    if(ra !== rb) return ra - rb;
+
+    const sa = SUIT_ORDER.indexOf(a.suit);
+    const sb = SUIT_ORDER.indexOf(b.suit);
+    return sa - sb;
+  });
+  return arr;
+}
+
+/* =========================================================
+   商店 UI（先做畫面，不做購買邏輯） 
+========================================================= */
+const shopOverlay = document.getElementById('shop-overlay');
+const shopClose = document.getElementById('shop-close');
+const shopTabs = [...document.querySelectorAll('.tab')];
+const tabPages = [...document.querySelectorAll('.tab-page')];
+
+const shopSubtabs = [...document.querySelectorAll('.subtab')];
+const ownedToolsPage = document.getElementById('owned-tools');
+const ownedConsumablesPage = document.getElementById('owned-consumables');
+
+const toolsGrid = document.getElementById('tools-grid');
+const consumablesGrid = document.getElementById('consumables-grid');
+const ownedToolsGrid = document.getElementById('owned-tools-grid');
+const ownedConsumablesGrid = document.getElementById('owned-consumables-grid');
+
+let isShopOpen = false;
+
+function setGamePaused(paused){
+  // 暫停：出牌/棄牌不能按 + 牌不能點
+  if(paused){
+    btnPlay.disabled = true;
+    btnDiscard.disabled = true;
+    handCards.style.pointerEvents = 'none';
+  }else{
+    handCards.style.pointerEvents = 'auto';
+    updateActionButtons(); // 依目前選牌/棄牌次數等狀態恢復
+  }
+}
+
+function openShop(){
+  isShopOpen = true;
+  shopOverlay.classList.add('show');
+  setGamePaused(true);
+  ensureShopOffers();
+}
+
+function closeShop(){
+  isShopOpen = false;
+  shopOverlay.classList.remove('show');
+  setGamePaused(false);
+}
+
+/* 點背景不關（避免誤觸），只點 X 關 */
+shopClose.addEventListener('click', closeShop);
+
+/* ESC 關閉（桌機方便，手機不影響） */
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && isShopOpen) closeShop();
+});
+
+/* 第一層分頁切換 */
+shopTabs.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    shopTabs.forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+
+    const targetId = btn.dataset.tab;
+    tabPages.forEach(p=>{
+      p.style.display = (p.id === targetId) ? '' : 'none';
+    });
+  });
+});
+
+/* 第二層分頁（已擁有）切換 */
+shopSubtabs.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    shopSubtabs.forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+
+    const target = btn.dataset.subtab;
+    if(target === 'owned-tools'){
+      ownedToolsPage.style.display = '';
+      ownedConsumablesPage.style.display = 'none';
+    }else{
+      ownedToolsPage.style.display = 'none';
+      ownedConsumablesPage.style.display = '';
     }
-  </script>
+  });
+});
+
+/* ===== 先塞「假商品」來確認 UI ===== */
+function renderItemCard(parent, item){
+  const div = document.createElement('div');
+  div.className = 'item-card';
+  div.innerHTML = `
+    <div class="item-name">${item.name}</div>
+    <div class="item-desc">${item.desc}</div>
+    <div class="item-meta">${item.meta}</div>
+  `;
+  parent.appendChild(div);
+}
+
+/* ===== 商店資料 ===== */
+const shopCoinEl = document.getElementById('shop-coin');
+
+/* 道具清單 */
+const TOOL_DATA = [
+  { name:"人頭牌 +5 燃料", price:[18], max:1 },
+  { name:"每關首次補給 +30% 燃料", price:[28], max:1 },
+  { name:"一關內每次補給，額外 +3 燃料", price:[22], max:1 },
+  { name:"補給 +20 燃料，每次通關後再永久 +2 燃料", price:[40], max:1, sellable:false },
+  { name:"每棄1張牌，下次補給獲得燃料 +5%", price:[26], max:1 },
+  { name:"若補給只含人頭牌，+20% 燃料", price:[24], max:1 },
+  { name:"高牌的下次補給 +50% 燃料", price:[20], max:1 },
+  { name:"若補給包含3張牌以上，+20% 燃料", price:[18], max:1 },
+  { name:"目前牌組每少1張牌 +2 燃料", price:[18], max:1 },
+  { name:"一關內每使用過一種牌型 +6 燃料", price:[26], max:1 },
+  { name:"補給將不會移除人頭牌", price:[45], max:1 },
+
+  // 可多次購買（最多 2 次）
+  { name:"增加1棄牌次數", price:[24,34], max:2, sellable:false },
+
+  // 可多次購買（最多 3 次）
+  { name:"手牌上限+1張", price:[28,38,48], max:3, sellable:false },
+
+  { name:"黑桃和梅花視為同花色", price:[32], max:1 },
+  { name:"紅心和方塊視為同花色", price:[32], max:1 },
+  { name:"僅需4張牌即可構築順子、同花", price:[48], max:1 },
+  { name:"順子牌型每張牌可相差1點", price:[44], max:1 },
+  { name:"若補給包含5張牌，當局獲得1次棄牌次數", price:[34], max:1 },
+  { name:"每關首次補給回復 1 HP", price:[24], max:1 },
+  { name:"通關時若 HP ≤ 2，回復至 3", price:[20], max:1 },
+  { name:"每關每使用一種新牌型，回復 1 HP", price:[36], max:1 },
+  { name:"每關首次補給順子以上牌型，回復 1 HP", price:[22], max:1 },
+  { name:"最大 HP +1", price:[15,18,21,24], max:4, sellable:false },
+  { name:"每通過一大關，最大 HP +1", price:[30], max:1 },
+  { name:"每關免疫第一次傷害", price:[28], max:1 },
+
+  { name:"在【極端溫差】星球補給 +15% 燃料", price:[18], max:1 },
+  { name:"在【稀薄/缺乏大氣】星球，每次補給移除的牌隨機少 1 張", price:[20], max:1 },
+  { name:"在【高壓環境】星球補給 +10 燃料", price:[16], max:1 },
+  { name:"在【極端氣候】星球的首次補給 +20% 燃料", price:[16], max:1 },
+  { name:"在【地質高度活躍】星球的補給包含 3 張或以下時，燃料 +25%", price:[18], max:1 },
+  { name:"在【可能存在生命】星球的首次棄牌不消耗次數", price:[18], max:1 },
+  { name:"在【極端低溫】星球的首次補給 +15 燃料", price:[18], max:1 },
+
+  // 固定道具（永遠在商店，放最後）
+  { name:"通關金幣 +10%", price:[16], max:1, fixed:true },
+  { name:"若本關未使用棄牌，通關金幣 +30%", price:[20], max:1, fixed:true }
+];
+
+const CONSUMABLE_DATA = [
+  { name:"扣血頻率改為4次補給，持續一關", price:18, sellable:false },
+  { name:"立即回復 2 HP", price:14, sellable:false },
+  { name:"在【極端低溫】星球的下一次補給 +30% 燃料", price:12 },
+  { name:"下一次補給使用的牌全部不移除", price:16 },
+  { name:"下一次補給的牌型等級 +1", price:18 },
+  { name:"下一次補給若為高牌/一對/兩對， +25 燃料", price:16 },
+  { name:"立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫", price:14, sellable:false }
+];
+
+/* 已擁有 */
+const ownedTools = new Map();        // key: name, value: count
+const ownedConsumables = new Map();  // key: name, value: count
+
+/* 商店當前貨架 */
+let shopTools = [];       // 8 格（含固定）
+let shopConsumables = []; // 2 格
+
+function updateShopCoin(){
+  shopCoinEl.textContent = coins;
+}
+
+/* 隨機抽樣工具 */
+function pickRandom(list, k){
+  const arr = [...list];
+  shuffle(arr);
+  return arr.slice(0, Math.min(k, arr.length));
+}
+
+function getToolBuyCount(name){
+  const obj = ownedTools.get(name);
+  return obj ? obj.count : 0;
+}
+
+function getToolCurrentPrice(tool){
+  const bought = getToolBuyCount(tool.name);
+  return tool.price[Math.min(bought, tool.price.length - 1)];
+}
+
+function isToolSoldOut(tool){
+  const bought = getToolBuyCount(tool.name);
+  return bought >= tool.max;
+}
+
+
+function ownedGet(map, name){
+  return map.get(name) || { count:0, paid:[] };
+}
+
+function ownedAdd(map, name, paidPrice){
+  const obj = ownedGet(map, name);
+  obj.count += 1;
+  obj.paid.push(paidPrice);
+  map.set(name, obj);
+}
+
+function ownedRemoveOne(map, name){
+  const obj = ownedGet(map, name);
+  if(obj.count <= 0) return null;
+
+  obj.count -= 1;
+  const lastPaid = obj.paid.pop(); // 以「最後買入」作為本次售出的成本
+  if(obj.count <= 0){
+    map.delete(name);
+  }else{
+    map.set(name, obj);
+  }
+  return lastPaid; // 回傳這次售出的買入價
+}
+
+function hasConsumable(name){
+  const obj = ownedConsumables.get(name);
+  return !!obj && obj.count > 0;
+}
+
+// ✅ 消耗品生效時才「扣掉 1 個」：不給錢、不走出售流程
+function consumeConsumable(name){
+  // ownedRemoveOne 會把 count -1 並回傳 paid；這裡我們忽略 paid
+  return ownedRemoveOne(ownedConsumables, name) != null;
+}
+
+function sellPriceFromPaid(paidPrice){
+  return Math.floor(paidPrice / 2);
+}
+
+
+/* 生成商店貨架：6 隨機 + 2 固定（固定放最後）
+   若固定已買完（售罄）→ 用隨機補滿到 8 格
+*/
+function generateShopOffers(){
+  const fixedTools = TOOL_DATA.filter(t=>t.fixed);
+  const nonFixedTools = TOOL_DATA.filter(t=>!t.fixed);
+
+  const nonFixedAvailable = nonFixedTools.filter(t=>!isToolSoldOut(t));
+  const fixedAvailable = fixedTools.filter(t=>!isToolSoldOut(t));
+
+  // 先抽 6 個隨機（從非固定且可買的裡面）
+  const pickedNonFixed = pickRandom(nonFixedAvailable, 6);
+
+  // 固定放最後（但如果固定售罄就不放）
+  let result = [...pickedNonFixed, ...fixedAvailable];
+
+  // 若不足 8 格，從剩下的 nonFixedAvailable 補（避免重複）
+  const usedNames = new Set(result.map(x=>x.name));
+  const rest = nonFixedAvailable.filter(t=>!usedNames.has(t.name));
+  while(result.length < 8 && rest.length > 0){
+    const one = pickRandom(rest, 1)[0];
+    result.push(one);
+    usedNames.add(one.name);
+    const idx = rest.findIndex(t=>t.name===one.name);
+    if(idx !== -1) rest.splice(idx, 1);
+  }
+
+  // 最後確保「固定道具排在末端」
+  const nonFixedPart = result.filter(t=>!t.fixed);
+  const fixedPart = result.filter(t=>t.fixed);
+  shopTools = [...nonFixedPart, ...fixedPart].slice(0,8);
+
+  // 消耗品：抽 2 個
+  shopConsumables = pickRandom(CONSUMABLE_DATA, 2);
+
+  // 測試用強制塞指定商品
+  forceInjectShopOffers();
+}
+
+/* ===== 渲染卡片（含購買按鈕） ===== */
+function renderShop(){
+  updateShopCoin();
+
+  // 道具
+  toolsGrid.innerHTML = '';
+  shopTools.forEach(tool=>{
+    const bought = getToolBuyCount(tool.name);
+    const price = getToolCurrentPrice(tool);
+    const soldOut = isToolSoldOut(tool);
+
+    const div = document.createElement('div');
+    div.className = 'item-card';
+    const unsellableText = (tool.sellable === false)
+      ? `<span class="item-unsellable">無法售出</span>`
+      : '';
+
+    div.innerHTML = `
+      <div class="item-name">${tool.name}</div>
+
+      <div class="item-meta" style="display:flex; align-items:center; gap:8px;">
+        <span>價格：${price}</span>
+        ${unsellableText}
+      </div>
+
+      <button class="action-btn" style="margin-top:8px;" ${soldOut ? 'disabled' : ''}>
+        購買
+      </button>
+    `;
+
+    const btn = div.querySelector('button');
+    btn.addEventListener('click', ()=>{
+      buyTool(tool);
+    });
+
+    toolsGrid.appendChild(div);
+  });
+
+  // 消耗品
+  consumablesGrid.innerHTML = '';
+  shopConsumables.forEach(item=>{
+    const div = document.createElement('div');
+    div.className = 'item-card';
+    const unsellableText = (item.sellable === false)
+      ? `<span class="item-unsellable">無法售出</span>`
+      : '';
+
+    div.innerHTML = `
+      <div class="item-name">${item.name}</div>
+
+      <div class="item-meta" style="display:flex; align-items:center; gap:8px;">
+        <span>價格：${item.price}</span>
+        ${unsellableText}
+      </div>
+
+      <button class="action-btn" style="margin-top:8px;">
+        購買
+      </button>
+    `;
+
+    const btn = div.querySelector('button');
+    btn.addEventListener('click', ()=>{
+      buyConsumable(item);
+    });
+
+    consumablesGrid.appendChild(div);
+  });
+
+  // 已擁有：道具
+  ownedToolsGrid.innerHTML = '';
+  if(ownedTools.size === 0){
+    ownedToolsGrid.innerHTML = `<div class="item-card"><div class="item-name">（尚未擁有道具）</div></div>`;
+  }else{
+    [...ownedTools.entries()].forEach(([name,obj])=>{
+      const div = document.createElement('div');
+      div.className = 'item-card';
+      const sellable = isSellableOwned('tool', name);
+      const lastPaid = obj.paid[obj.paid.length - 1] ?? 0;
+      const sellPrice = sellable ? sellPriceFromPaid(lastPaid) : null;
+
+      div.innerHTML = `
+        <div class="item-name">${name}</div>
+
+        <div class="item-meta" style="display:flex; align-items:center; gap:12px;">
+          <span>數量：${obj.count}</span>
+
+          ${
+            sellable
+              ? `<span>出售價格：${sellPrice}</span>`
+              : `<span class="item-unsellable" style="margin-left:auto;">無法出售</span>`
+          }
+        </div>
+      `;
+
+      if(sellable){
+        div.style.cursor = 'pointer';
+        div.addEventListener('click', ()=> openSellConfirm('tool', name));
+      }else{
+        div.style.cursor = 'not-allowed';
+        div.style.opacity = '0.85';
+        div.addEventListener('click', ()=> showToastText('此物品不可出售', 900));
+      }
+      ownedToolsGrid.appendChild(div);
+    });
+  }
+
+  // 已擁有：消耗品
+  ownedConsumablesGrid.innerHTML = '';
+  if(ownedConsumables.size === 0){
+    ownedConsumablesGrid.innerHTML = `<div class="item-card"><div class="item-name">（尚未擁有消耗品）</div></div>`;
+  }else{
+    [...ownedConsumables.entries()].forEach(([name,obj])=>{
+      const sellable = isSellableOwned('consumable', name);
+      const lastPaid = obj.paid[obj.paid.length - 1] ?? 0;
+      const sellPrice = sellable ? sellPriceFromPaid(lastPaid) : null;
+
+      const div = document.createElement('div');
+      div.className = 'item-card';
+
+      div.innerHTML = `
+        <div class="item-name">${name}</div>
+
+        <div class="item-meta" style="display:flex; align-items:center; gap:12px;">
+          <span>數量：${obj.count}</span>
+
+          ${
+            sellable
+              ? `<span>出售價格：${sellPrice}</span>`
+              : `<span class="item-unsellable" style="margin-left:auto;">無法出售</span>`
+          }
+        </div>
+      `;
+
+      if(sellable){
+        div.style.cursor = 'pointer';
+        div.addEventListener('click', ()=> openSellConfirm('consumable', name));
+      }else{
+        div.style.cursor = 'not-allowed';
+        div.style.opacity = '0.85';
+        div.addEventListener('click', ()=> showToastText('此物品不可出售', 900));
+      }
+      ownedConsumablesGrid.appendChild(div);
+    });
+  }
+}
+
+/* ===== 出售確認邏輯 ===== */
+const confirmOverlay = document.getElementById('confirm-overlay');
+const confirmText = document.getElementById('confirm-text');
+const confirmYes = document.getElementById('confirm-yes');
+const confirmNo = document.getElementById('confirm-no');
+
+let pendingSell = null; // { type:'tool'|'consumable', name:string }
+
+function openSellConfirm(type, name){
+  if(!isSellableOwned(type, name)){
+    showToastText('此物品不可出售', 900);
+    return;
+  }
+  pendingSell = { type, name };
+  confirmText.textContent = `是否出售「${name}」？`;
+  confirmOverlay.style.display = 'flex';
+}
+
+
+function closeSellConfirm(){
+  pendingSell = null;
+  confirmOverlay.style.display = 'none';
+}
+
+confirmNo.addEventListener('click', closeSellConfirm);
+
+confirmYes.addEventListener('click', ()=>{
+  if(!pendingSell) return;
+
+  const { type, name } = pendingSell;
+
+  let paid = null;
+  if(type === 'tool'){
+    paid = ownedRemoveOne(ownedTools, name);
+  }else{
+    paid = ownedRemoveOne(ownedConsumables, name);
+  }
+
+  if(paid == null){
+    closeSellConfirm();
+    renderShop();
+    return;
+  }
+
+  const gain = sellPriceFromPaid(paid);
+  coins += gain;
+
+  // ✅ 賣掉後：商店之後有機會刷到
+  // 這裡不用立刻把它塞回本關貨架（避免違反「本關不刷新」）
+  // 只要它不再被視為 sold out，下次通關刷新就會有機會出現
+
+  showToastText(`出售成功 +${gain} 金幣`, 900);
+
+  closeSellConfirm();
+  renderShop();
+  saveProgress();
+});
+
+
+/* ===== 購買行為（先做入庫 + 從商店消失/變價） ===== */
+function buyTool(tool){
+  const price = getToolCurrentPrice(tool);
+  if(coins < price){
+    showToastText('金幣不足', 900);
+    return;
+  }
+
+  coins -= price;
+
+  ownedAdd(ownedTools, tool.name, price);
+
+  if(tool.name === "增加1棄牌次數"){
+    extraDiscards += 1;
+    discardsLeft += 1;
+    updateHUD();
+  }else if(tool.name === "手牌上限+1張"){
+    HAND_SIZE = Math.min(HAND_SIZE + 1, HAND_SIZE_MAX);
+    const targetHandSize = Math.min(HAND_SIZE, HAND_SIZE_MAX);
+    const drawCount = Math.max(0, targetHandSize - hand.length);
+    if(drawCount > 0){
+      drawFromPile(drawCount);
+    }
+    renderHand();
+    updateHUD();
+  }else if(tool.name === "最大 HP +1"){
+    maxHP = computeMaxHP();
+    hp = Math.min(maxHP, hp + 1);
+    updateHUD();
+  }
+
+  // ✅ 若達上限：從本關商店貨架移除（不補貨、不刷新）
+  if(isToolSoldOut(tool)){
+    shopTools = shopTools.filter(t=>t.name !== tool.name);
+  }
+
+  showToastText('購買成功', 700);
+  renderShop();
+  saveProgress();
+}
+
+
+function buyConsumable(item){
+  if(coins < item.price){
+    showToastText('金幣不足', 900);
+    return;
+  }
+  coins -= item.price;
+
+  // ✅ 只有這兩個：買了立刻生效（且本來就不可售出）
+  if(item.name === "立即回復 2 HP"){
+    healHp(2);
+    updateHUD();
+    showToastText('回復 +2 HP', 900);
+
+  }else if(item.name === "立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫"){
+    showToastText('請從兩張牌中選一張', 900);
+    useConsumable_Draw2Pick1();
+
+  }else{
+    // ✅ 其他全部：只入庫（是否生效由 owned 判斷）
+    ownedAdd(ownedConsumables, item.name, item.price);
+    showToastText('購買成功', 700);
+  }
+
+  // ✅ 買了就從當前貨架消失（本關不補貨）
+  shopConsumables = shopConsumables.filter(x=>x.name !== item.name);
+
+  renderShop();
+  saveProgress();
+}
+
+
+/* 開商店時若還沒抽貨，就抽一次並渲染 */
+function ensureShopOffers(){
+  if(shopTools.length === 0 && shopConsumables.length === 0){
+    generateShopOffers();
+  }
+  renderShop();
+}
+
+function refreshShopForNewLevel(){
+  generateShopOffers(); // 6 隨機 + 固定放最後 + 消耗品2
+  renderShop();
+}
+
+function findToolDefByName(name){
+  return TOOL_DATA.find(x => x.name === name) || null;
+}
+function findConsumableDefByName(name){
+  return CONSUMABLE_DATA.find(x => x.name === name) || null;
+}
+
+function isSellableOwned(type, name){
+  if(type === 'tool'){
+    const def = findToolDefByName(name);
+    // 預設可賣：沒定義就當 true
+    return def?.sellable !== false;
+  }else{
+    const def = findConsumableDefByName(name);
+    return def?.sellable !== false;
+  }
+}
+
+
+
+/* =========================================================
+   工具
+========================================================= */
+function isFaceCard(c){
+  return ['J','Q','K','A'].includes(c.rank);
+}
+
+function shuffle(array){
+  for(let i=array.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [array[i],array[j]] = [array[j],array[i]];
+  }
+}
+
+function stageToChinese(n){
+  const map = {1:"一",2:"二",3:"三"};
+  return map[n] || String(n);
+}
+
+function selectedCount(){
+  return document.querySelectorAll('.card.selected').length;
+}
+function getSelectedCardIds(){
+  return [...document.querySelectorAll('.card.selected')].map(el => el.dataset.id);
+}
+
+function removeCardsFromHandByIds(ids){
+  const removed = [];
+  ids.forEach(id=>{
+    const idx = hand.findIndex(c => (c.suit + c.rank) === id);
+    if(idx !== -1){
+      removed.push(hand.splice(idx,1)[0]);
+    }
+  });
+  return removed;
+}
+
+let toastTimer = null;
+function showToastText(text, ms=900){
+  toast.textContent = text;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{
+    toast.classList.remove('show');
+  }, ms);
+}
+
+function updateActionButtons(){
+  const hasSelected = selectedCount() > 0;
+  btnPlay.disabled = !hasSelected || hp <= 0;                 // 沒選牌 / 沒血 不能補給
+  btnDiscard.disabled = !hasSelected || discardsLeft <= 0;    // 沒選牌 / 沒棄牌次數 不能丟棄
+}
+
+function updateHUD(){
+  // 大關中文：第X大關
+  hudStageText.textContent = `第${stageToChinese(bigStage)}大關`;
+
+  hudFuel.textContent = fuel;
+  hudTarget.textContent = targetFuel;
+  hudDiscards.textContent = discardsLeft;
+
+  if(hudDeck) hudDeck.textContent = drawPile?.length ?? 0;
+
+  // 血條
+  const ratio = maxHP > 0 ? (hp / maxHP) : 0;
+  hpFill.style.width = `${Math.max(0, Math.min(1, ratio)) * 100}%`;
+  hpText.textContent = `HP: ${hp}/${maxHP}`;
+
+  // 星球名 + 中央圖片
+  const info = LEVELS[levelIndex];
+  levelNameEl.textContent = info?.name ?? "（未知星球）";
+  planetImageEl.src = info?.image || "";
+  planetImageEl.style.display = (planetImageEl.src ? "" : "none");
+
+  updateTopUILayout();
+}
+
+function computePassCoins(baseCoins){
+  let coins = baseCoins;
+
+  // ===== 通關金幣 +10% =====
+  if(ownedTools.has("通關金幣 +10%")){
+    coins *= 1.10;
+  }
+
+  // ===== 若本關未使用棄牌，通關金幣 +30% =====
+  if(
+    ownedTools.has("若本關未使用棄牌，通關金幣 +30%")
+    && discardsLeft === DISCARD_PER_LEVEL
+  ){
+    coins *= 1.30;
+  }
+
+  // 無條件捨去
+  return Math.floor(coins);
+}
+
+function findToolDefByName(name){
+  return TOOL_DATA.find(x => x.name === name) || null;
+}
+function findConsumableDefByName(name){
+  return CONSUMABLE_DATA.find(x => x.name === name) || null;
+}
+
+function isSellableOwned(type, name){
+  if(type === 'tool'){
+    const def = findToolDefByName(name);
+    // 預設可賣：沒定義就當 true
+    return def?.sellable !== false;
+  }else{
+    const def = findConsumableDefByName(name);
+    return def?.sellable !== false;
+  }
+}
+
+function resolveSupply(outCards, stageCountForThisSupply){
+  let base = evaluateHand(outCards);
+  let type = base.type;
+
+  // ✅ 下一次補給牌型等級 +1（一次性）
+  if(tempEffects.nextSupplyHandRankPlus1 > 0){
+    type = handTypeUpgraded(type, tempEffects.nextSupplyHandRankPlus1);
+    tempEffects.nextSupplyHandRankPlus1 = 0;
+  }
+
+  let fuelGain = FUEL_BY_HANDTYPE[type] ?? base.fuelGain;
+  const cardCount = outCards.length;
+
+  supplyCountInLevel += 1;
+  const isNewHandTypeInLevel = !usedHandTypesInLevel.has(type);
+  usedHandTypesInLevel.add(type);
+
+  const straightIndex = HAND_TYPE_ORDER.indexOf("順子");
+  const typeIndex = HAND_TYPE_ORDER.indexOf(type);
+  const isStraightOrBetter = typeIndex >= straightIndex;
+
+  let hpGain = 0;
+  if(ownedTools.has("每關首次補給回復 1 HP") && supplyCountInLevel === 1){
+    hpGain += 1;
+  }
+  if(ownedTools.has("每關每使用一種新牌型，回復 1 HP") && isNewHandTypeInLevel){
+    hpGain += 1;
+  }
+  if(
+    ownedTools.has("每關首次補給順子以上牌型，回復 1 HP")
+    && isStraightOrBetter
+    && !straightPlusSupplyUsedInLevel
+  ){
+    hpGain += 1;
+    straightPlusSupplyUsedInLevel = true;
+  }
+  if(hpGain > 0){
+    healHp(hpGain);
+    updateHUD();
+  }
+
+  const isFaceOnly = outCards.every(c => ['J','Q','K','A'].includes(c.rank));
+
+  /* ===== 先吃「暫時效果」（吃完就清）===== */
+
+  // ✅ 消耗品：下一次低牌型 +25
+  if(tempEffects.nextSupplyLowHandBonus > 0){
+    if(type === "高牌" || type === "一對" || type === "兩對"){
+      fuelGain += tempEffects.nextSupplyLowHandBonus;
+    }
+    tempEffects.nextSupplyLowHandBonus = 0;
+  }
+
+  // ✅ 道具：高牌的下次補給 +50%
+  if(tempEffects.nextSupplyFuelMult && tempEffects.nextSupplyFuelMult !== 1){
+    fuelGain *= tempEffects.nextSupplyFuelMult;
+    tempEffects.nextSupplyFuelMult = 1;
+  }
+
+  // ✅ 道具：棄牌累積，下次補給 +X%
+  if(tempEffects.nextSupplyFuelPctFromDiscard > 0){
+    fuelGain *= (1 + tempEffects.nextSupplyFuelPctFromDiscard);
+    tempEffects.nextSupplyFuelPctFromDiscard = 0;
+  }
+
+  /* ===== 燃料修正（永久道具）===== */
+
+  if(ownedTools.has("人頭牌 +5 燃料")){
+    const faceCount = outCards.filter(c => ['J','Q','K','A'].includes(c.rank)).length;
+    fuelGain += faceCount * 5;
+  }
+
+  if(ownedTools.has("每關首次補給 +30% 燃料") && supplyCountInLevel === 1){
+    fuelGain *= 1.3;
+  }
+
+  if(ownedTools.has("補給 +20 燃料，每次通關後再永久 +2 燃料")){
+    fuelGain += 20 + supplyBonusPerClear;
+  }
+
+  if(ownedTools.has("一關內每次補給，額外 +3 燃料")){
+    fuelGain += supplyCountInLevel * 3;
+  }
+
+  if(ownedTools.has("若補給只含人頭牌，+20% 燃料") && isFaceOnly){
+    fuelGain *= 1.2;
+  }
+
+  if(ownedTools.has("若補給包含3張牌以上，+20% 燃料") && cardCount >= 3){
+    fuelGain *= 1.2;
+  }
+
+  if(ownedTools.has("目前牌組每少1張牌 +2 燃料")){
+    const currentDeckSize = (drawPile?.length ?? 0) + (hand?.length ?? 0);
+    const missingCards = Math.max(0, deck.length - currentDeckSize);
+    fuelGain += missingCards * 2;
+  }
+
+  if(ownedTools.has("一關內每使用過一種牌型 +6 燃料")){
+    fuelGain += usedHandTypesInLevel.size * 6;
+  }
+
+  if(
+    ownedTools.has("在【極端溫差】星球補給 +15% 燃料")
+    && hasLevelTrait("極端溫差")
+  ){
+    fuelGain *= 1.15;
+  }
+
+  if(
+    ownedTools.has("在【極端氣候】星球的首次補給 +20% 燃料")
+    && hasLevelTrait("極端氣候")
+    && supplyCountInLevel === 1
+  ){
+    fuelGain *= 1.2;
+  }
+
+  if(
+    ownedTools.has("在【地質高度活躍】星球的補給包含 3 張或以下時，燃料 +25%")
+    && hasLevelTrait("地質高度活躍")
+    && cardCount <= 3
+  ){
+    fuelGain *= 1.25;
+  }
+
+  if(
+    ownedTools.has("在【高壓環境】星球補給 +10 燃料")
+    && hasLevelTrait("高壓環境")
+  ){
+    fuelGain += 10;
+  }
+
+  if(
+    ownedTools.has("在【極端低溫】星球的首次補給 +15 燃料")
+    && hasLevelTrait("極端低溫")
+    && supplyCountInLevel === 1
+  ){
+    fuelGain += 15;
+  }
+
+  const planetBonusHands = PLANET_HANDTYPE_BONUS[type] ?? [];
+  if(planetBonusHands.includes(getCurrentLevelInfo().name)){
+    fuelGain *= 1.5;
+  }
+
+  fuelGain = Math.floor(fuelGain);
+
+  /* ===== 觸發：高牌的下次補給 +50% ===== */
+  if(ownedTools.has("高牌的下次補給 +50% 燃料") && type === "高牌"){
+    tempEffects.nextSupplyFuelMult = Math.max(tempEffects.nextSupplyFuelMult, 1.5);
+  }
+
+  /* ===== HP 結算（✅修 bug：用 stageCountForThisSupply 判斷）===== */
+  let hpDelta = 0;
+  const hpRule = tempEffects.supplyHpOverride?.per
+    ?? SUPPLY_PER_HP_BY_STAGE[bigStage]
+    ?? 3;
+
+  if(stageCountForThisSupply % hpRule === 0){
+    if(ownedTools.has("每關免疫第一次傷害") && !immuneHitUsedInLevel){
+      immuneHitUsedInLevel = true;
+    }else{
+      hpDelta = -1;
+    }
+  }
+
+  /* ===== 額外回傳：5張補給 +1棄牌 ===== */
+  let extraDiscards = 0;
+  if(ownedTools.has("若補給包含5張牌，當局獲得1次棄牌次數") && cardCount === 5){
+    extraDiscards += 1;
+  }
+
+  return { type, fuelGain, hpDelta, cardCount, extraDiscards };
+}
+
+function getCurrentLevelInfo(){
+  return LEVELS[levelIndex] || LEVELS[0];
+}
+
+function hasLevelTrait(trait){
+  const info = getCurrentLevelInfo();
+  return Array.isArray(info.traits) && info.traits.includes(trait);
+}
+
+function armConsumablesBeforeSupply(){
+  // 1) 下一次補給：全部不移除（一次性）
+  if(!tempEffects.nextSupplyNoRemove && hasConsumable("下一次補給使用的牌全部不移除")){
+    tempEffects.nextSupplyNoRemove = true;
+    consumeConsumable("下一次補給使用的牌全部不移除");
+  }
+
+  // 2) 下一次補給：牌型等級 +1（一次性）
+  if(tempEffects.nextSupplyHandRankPlus1 <= 0 && hasConsumable("下一次補給的牌型等級 +1")){
+    tempEffects.nextSupplyHandRankPlus1 = 1;
+    consumeConsumable("下一次補給的牌型等級 +1");
+  }
+
+  // 3) 下一次補給：低牌型 +25（一次性）
+  if(tempEffects.nextSupplyLowHandBonus <= 0 && hasConsumable("下一次補給若為高牌/一對/兩對， +25 燃料")){
+    tempEffects.nextSupplyLowHandBonus = 25;
+    consumeConsumable("下一次補給若為高牌/一對/兩對， +25 燃料");
+  }
+
+  // 4) 扣血頻率改為 4 次補給（持續一關）
+  // 規則：同一關若已生效則忽略（不消耗），留到下一關再用。
+  if(!tempEffects.supplyHpOverride && hasConsumable("扣血頻率改為4次補給，持續一關")){
+    tempEffects.supplyHpOverride = { per: 4 };
+    consumeConsumable("扣血頻率改為4次補給，持續一關");
+  }
+
+  // 5) 極端低溫：下一次補給 +30%（一次性）
+  if(hasConsumable("在【極端低溫】星球的下一次補給 +30% 燃料") && hasLevelTrait("極端低溫")){
+    // （與高牌+50%共存）
+    tempEffects.nextSupplyFuelMult = Math.max(tempEffects.nextSupplyFuelMult, 1.3);
+    consumeConsumable("在【極端低溫】星球的下一次補給 +30% 燃料");
+  }
+}
+
+/* =========================================================
+   消耗品：抽2選1加入手牌（另一張回牌庫）
+========================================================= */
+let pickOverlayEl = null;
+
+function openPick2Overlay(twoCards, onPick){
+  if(isShopOpen) closeShop();
+  setGamePaused(true);
+
+  pickOverlayEl = document.createElement('div');
+  pickOverlayEl.id = 'pick2-overlay';
+  pickOverlayEl.style.cssText = `
+    position:fixed; inset:0; z-index:9999;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.65);
+  `;
+
+  pickOverlayEl.innerHTML = `
+    <div style="
+      width: min(80vw, 860px);
+      max-height: 80vh;
+      background: rgba(10,12,16,0.96);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 22px 18px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+      text-align: center;
+      overflow: auto;
+    ">
+      <div style="font-size:18px; font-weight:800; margin-bottom:14px;">
+        請選擇一張
+      </div>
+
+      <div style="display:flex; gap:14px; justify-content:center;">
+        ${twoCards.map((c, idx)=>`
+          <div class="pick-card" data-idx="${idx}" style="
+            width:160px; max-width:38vw;
+            border-radius:12px;
+            border:1px solid rgba(255,255,255,0.12);
+            background:rgba(255,255,255,0.03);
+            padding:10px;
+            cursor:pointer;
+            transition:transform .12s ease;
+          ">
+            <img src="${CARD_IMAGE_PATH + c.img}" style="width:100%; display:block; border-radius:10px;">
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="opacity:0.75; margin-top:12px; font-size:12px;">
+        選中後：該牌加入手牌，另一張回牌庫
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(pickOverlayEl);
+
+  pickOverlayEl.querySelectorAll('.pick-card').forEach(el=>{
+    el.addEventListener('mouseenter', ()=> el.style.transform = 'translateY(-2px)');
+    el.addEventListener('mouseleave', ()=> el.style.transform = 'translateY(0)');
+  });
+
+  let done = false;
+  pickOverlayEl.addEventListener('click', (e)=>{
+    if(done) return;
+
+    const cardEl = e.target.closest('.pick-card');
+    if(!cardEl) return; // 點到黑背景就忽略，仍可繼續選
+
+    done = true;
+    const idx = Number(cardEl.dataset.idx);
+    onPick(idx);
+
+    pickOverlayEl.remove();
+    pickOverlayEl = null;
+
+    renderHand();
+    updateHUD();
+    setGamePaused(false);
+    saveProgress();
+  });
+}
+
+function useConsumable_Draw2Pick1(){
+  // 牌庫不足：能抽幾張就抽幾張，但少於2就直接提示
+  if(!drawPile || drawPile.length === 0){
+    showToastText('牌庫沒有牌了', 1000);
+    return;
+  }
+
+  const take = Math.min(2, drawPile.length);
+  const picked = [];
+  for(let i=0;i<take;i++){
+    picked.push(drawPile.pop());
+  }
+
+  if(picked.length < 2){
+    // 抽不到 2 張：就把抽到的放回去
+    drawPile.push(...picked);
+    shuffle(drawPile);
+    showToastText('牌庫不足 2 張，無法使用', 1100);
+    return;
+  }
+
+  openPick2Overlay(picked, (idx)=>{
+    const chosen = picked[idx];
+    const other = picked[1 - idx];
+
+    // ✅ 被選中的加入手牌（允許超上限）
+    hand.push(chosen);
+
+    // ✅ 另一張回牌庫並洗
+    drawPile.push(other);
+    shuffle(drawPile);
+
+    showToastText('已加入手牌（下次補牌 -1）', 1200);
+  });
+}
+
+
+/* =========================================================
+   抽牌 / 發牌 / UI render
+========================================================= */
+function initBigStageResetDeck(){
+  // 每過一大關，牌庫重置為完整 52 張
+  drawPile = [...deck];
+  shuffle(drawPile);
+  played = [];
+}
+
+function drawFromPile(n){
+  for(let i=0;i<n;i++){
+    if(drawPile.length <= 0){
+      showToastText('牌庫已空', 1100);
+      break;
+    }
+    hand.push(drawPile.pop());
+  }
+}
+
+function renderHand(){
+  handCards.innerHTML = '';
+
+  // 依規格排序顯示（但 hand 本身不必真的重排也沒關係）
+  const sorted = [...hand];
+  sortHand(sorted);
+
+  sorted.forEach(cardData=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.rank = cardData.rank;
+    card.dataset.suit = cardData.suit;
+    card.dataset.id = cardData.suit + cardData.rank;
+
+    const img = document.createElement('img');
+    img.src = CARD_IMAGE_PATH + cardData.img;
+
+    card.appendChild(img);
+
+    card.addEventListener('click',()=>{
+      if(card.classList.contains('selected')){
+        card.classList.remove('selected');
+        updateActionButtons();
+        return;
+      }
+      if(selectedCount() >= MAX_SELECT){
+        showToastText('已達出/棄牌上限', 900);
+        return;
+      }
+      card.classList.add('selected');
+      updateActionButtons();
+    });
+
+    handCards.appendChild(card);
+  });
+
+  updateActionButtons();
+}
+
+/* =========================================================
+   牌型判斷（最多 5 張）
+========================================================= */
+function rankValue(r){
+  return RANK_ORDER.indexOf(r); // 0..12
+}
+
+function normalizedSuit(s){
+  // 依道具把花色合併成「同花色群組」
+  if(ownedTools.has("黑桃和梅花視為同花色")){
+    if(s === 'S' || s === 'C') return 'SC';
+  }
+  if(ownedTools.has("紅心和方塊視為同花色")){
+    if(s === 'H' || s === 'D') return 'HD';
+  }
+  return s;
+}
+
+function isRoyalRanks(ranks, allow4){
+  const set = new Set(ranks);
+  if(allow4){
+    // 4 張皇家：JQKA（規則：需有「僅需4張牌即可構築順子、同花」）
+    return set.size === 4 && ['J','Q','K','A'].every(x => set.has(x));
+  }
+  // 5 張皇家：TJQKA
+  return set.size === 5 && ['T','J','Q','K','A'].every(x => set.has(x));
+}
+
+function isStraightStrict(vals){
+  // vals: 已由小到大且去重
+  const n = vals.length;
+  if(n < 2) return false;
+
+  // 一般順子（連號）
+  let ok = true;
+  for(let i=1;i<n;i++){
+    if(vals[i] !== vals[i-1] + 1){ ok = false; break; }
+  }
+  if(ok) return true;
+
+  // A2345 特例（只在 5 張時成立）
+  if(n === 5){
+    const wheel = [0,1,2,3,12];
+    for(let i=0;i<5;i++){
+      if(vals[i] !== wheel[i]) return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+function isStraightWithGap1(vals){
+  // 允許每一步差 1 或差 2（可插 1 張）
+  const n = vals.length;
+  if(n < 2) return false;
+
+  for(let i=1;i<n;i++){
+    const d = vals[i] - vals[i-1];
+    if(d !== 1 && d !== 2) return false;
+  }
+  return true;
+}
+
+function handTypeUpgraded(type, step){
+  if(!step) return type;
+
+  const i = HAND_TYPE_ORDER.indexOf(type);
+  if(i === -1) return type;
+
+  const j = Math.min(HAND_TYPE_ORDER.length - 1, i + step);
+  return HAND_TYPE_ORDER[j];
+}
+
+function evaluateHand(cards){
+  const n = cards.length;
+  if(n === 0) return { type:"高牌", fuelGain:0 };
+
+  const allow4SF = ownedTools.has("僅需4張牌即可構築順子、同花");
+  const gap1Straight = ownedTools.has("順子牌型每張牌可相差1點");
+
+  const ranks = cards.map(c=>c.rank);
+  const suits = cards.map(c=>normalizedSuit(c.suit));
+
+  // ===== 對子/三條/葫蘆/鐵支 =====
+  const counts = {};
+  ranks.forEach(r => counts[r] = (counts[r]||0) + 1);
+  const countList = Object.values(counts).sort((a,b)=>b-a);
+
+  // ===== 同花（吃合併花色）=====
+  const isFlush = suits.every(s => s === suits[0]);
+
+  // ===== 順子 =====
+  const valsRaw = ranks.map(rankValue).sort((a,b)=>a-b);
+  const vals = [...new Set(valsRaw)];
+  let isStraight = false;
+
+  const canCheckStraight = (n === 5) || (allow4SF && n === 4);
+
+  if(canCheckStraight && vals.length === n){
+    if(gap1Straight){
+      // gap1 放寬：差 1 或差 2；仍保留 A2345 strict 特判
+      isStraight = isStraightWithGap1(vals) || isStraightStrict(vals);
+    }else{
+      isStraight = isStraightStrict(vals);
+    }
+  }
+
+  // ===== 牌型判定 =====
+  let type = "高牌";
+
+  // 皇家同花順：一定要同花 + 順子 + 精準 ranks
+  const isRoyal =
+    isFlush &&
+    isStraight &&
+    (
+      (n === 5 && isRoyalRanks(ranks, false)) ||
+      (allow4SF && n === 4 && isRoyalRanks(ranks, true))
+    );
+
+  if(isRoyal){
+    type = "皇家同花順";
+  }else if((n === 5 || (allow4SF && n === 4)) && isStraight && isFlush){
+    type = "同花順";
+  }else if(countList[0] === 4){
+    type = "鐵支";
+  }else if(countList[0] === 3 && countList[1] === 2){
+    type = "葫蘆";
+  }else if((n === 5 || (allow4SF && n === 4)) && isFlush){
+    type = "同花";
+  }else if((n === 5 || (allow4SF && n === 4)) && isStraight){
+    type = "順子";
+  }else if(countList[0] === 3){
+    type = "三條";
+  }else if(countList[0] === 2 && countList[1] === 2){
+    type = "兩對";
+  }else if(countList[0] === 2){
+    type = "一對";
+  }else{
+    type = "高牌";
+  }
+
+  const fuelGain = FUEL_BY_HANDTYPE[type] ?? 0;
+  return { type, fuelGain };
+}
+
+/* =========================================================
+   關卡流程
+========================================================= */
+function startLevel(){
+  const info = LEVELS[levelIndex];
+
+  bigStage = info.stage;
+  targetFuel = info.targetFuel;
+  maxHP = computeMaxHP();
+  hp = Math.max(0, hp);
+  if(hp <= maxHP) hp = maxHP;
+  applyTestStartHp(); // 測試工具
+
+  resetLevelState();
+
+  initBigStageResetDeck();
+
+  // 發手牌
+  const injected = applyTestInitialHand();
+  if(!injected){
+    hand = [];
+  }
+  const targetHandSize = Math.min(HAND_SIZE, HAND_SIZE_MAX);
+  const drawCount = Math.max(0, targetHandSize - hand.length);
+  drawFromPile(drawCount);
+  renderHand();
+
+  updateHUD();
+  updateTopUILayout();
+}
+
+/* ===== 通關彈窗 ===== */
+const passText = document.getElementById('pass-text');
+const passOverlay = document.getElementById('pass-overlay');
+const passContinue = document.getElementById('pass-continue');
+
+let isPassOpen = false;
+
+function openPassModal(){
+  isPassOpen = true;
+  passOverlay.style.display = 'flex';
+
+  // 通關彈窗出現：暫停遊戲 + 避免商店/規則疊開
+  setGamePaused(true);
+  shopBtn.style.pointerEvents = 'none';
+  rulesBtn.style.pointerEvents = 'none';
+}
+
+function closePassModal(){
+  isPassOpen = false;
+  passOverlay.style.display = 'none';
+
+  // 通常通關後會直接跳頁，所以這裡不太會用到
+  setGamePaused(false);
+  shopBtn.style.pointerEvents = 'auto';
+  rulesBtn.style.pointerEvents = 'auto';
+}
+
+function passLevel(){
+  const info = LEVELS[levelIndex] || LEVELS[0];
+  const gainCoins = computePassCoins(info.passCoins);
+
+  passText.textContent =
+    `獲得 ${gainCoins} 金幣，按下「繼續」進入知識頁。`;
+
+  openPassModal();
+}
+
+/* 按「繼續」才真的做結算/存檔/跳知識頁 */
+passContinue.addEventListener('click', ()=>{
+  const info = LEVELS[levelIndex] || LEVELS[0];
+  const gainCoins = computePassCoins(info.passCoins);
+  const nextInfo = LEVELS[levelIndex + 1];
+  const isStageClear = !nextInfo || nextInfo.stage !== info.stage;
+
+  // 1) 發通關金幣
+  coins += gainCoins;
+
+  // 2) 通關才刷新商店
+  generateShopOffers();
+
+  // 3) 通關永久成長
+  if(ownedTools.has("補給 +20 燃料，每次通關後再永久 +2 燃料")){
+    supplyBonusPerClear += 2;
+  }
+
+  if(isStageClear){
+    bigStageClearCount += 1;
+  }
+
+  // 4) 通關回血道具（只在通關時觸發）
+  if(ownedTools.has("通關時若 HP ≤ 2，回復至 3") && hp <= 2){
+    hp = 3;
+  }
+
+  updateHUD();
+
+  // 5) 存檔並重置 fuel
+  // !!! 已放棄localStorage存檔方法，因為無法解決origin不同導致讀取不到存入的資料，改成將知識頁併入遊戲頁
+  fuel = 0;
+  saveProgress();
+
+  // 6) 跳知識頁（知識頁用 levelIndex 決定內容）
+  // location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/intro.html";
+  renderStar(levelIndex);
+});
+
+
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && isPassOpen){
+    // 通關彈窗通常不給關掉，避免玩家卡關；所以這裡不做 close
+    // 如果想允許關閉，就改成 closePassModal();
+    e.preventDefault();
+  }
+});
+
+/* ===== 失敗彈窗 ===== */
+const failOverlay = document.getElementById('fail-overlay');
+const failRetry = document.getElementById('fail-retry');
+const failRestart = document.getElementById('fail-restart');
+const failSummary = document.getElementById('fail-summary');
+const failText = document.getElementById('fail-text');
+
+let isFailOpen = false;
+
+function openFailModal(){
+  isFailOpen = true;
+  failOverlay.style.display = 'flex';
+
+  // 暫停遊戲 + 禁止其它 icon 疊開
+  setGamePaused(true);
+  shopBtn.style.pointerEvents = 'none';
+  rulesBtn.style.pointerEvents = 'none';
+}
+
+function closeFailModal(){
+  isFailOpen = false;
+  failOverlay.style.display = 'none';
+
+  shopBtn.style.pointerEvents = 'auto';
+  rulesBtn.style.pointerEvents = 'auto';
+}
+
+function showFinalScreen(scoreLevelIndex){
+  document.getElementById("game-screen").classList.add("hidden");
+  document.getElementById("info-screen").classList.add("hidden");
+  document.getElementById("final-screen").classList.remove("hidden");
+
+  const info = LEVELS[scoreLevelIndex] || LEVELS[0];
+  const stageLabel = `第${stageToChinese(info.stage)}大關`;
+  const scoreText = `你的成績：${stageLabel}——${info.name}`;
+
+  document.getElementById("endscore-display").textContent = scoreText;
+}
+
+function endGameSummary(){
+  closeFailModal();
+  saveProgress();
+  showFinalScreen(levelIndex);
+}
+
+/* ===== 本關重新開始（不動 levelIndex，不動已擁有/金幣/商店貨架） ===== */
+function restartCurrentLevel(){
+  closeFailModal();
+
+  // 關卡基本數值重置
+  const info = LEVELS[levelIndex] || LEVELS[0];
+  bigStage = info.stage;
+  fuel = 0;
+  targetFuel = info.targetFuel;
+  maxHP = computeMaxHP();
+  hp = maxHP;
+
+  resetLevelState();
+
+  supplyCountInStage = 0;
+
+  // 手牌上限 HAND_SIZE：目前是「永久道具」會改它，所以重開別動 HAND_SIZE
+  // HAND_SIZE 不重置
+
+  initBigStageResetDeck();
+
+  // 發牌
+  hand = [];
+  drawFromPile(Math.min(HAND_SIZE, HAND_SIZE_MAX));
+  renderHand();
+  updateHUD();
+
+  // 讓按鈕恢復可按
+  setGamePaused(false);
+}
+
+/* ===== 遊戲重頭開始（清存檔 + 回到初始狀態） ===== */
+function restartWholeGame(){
+  // localStorage.removeItem('gameState');
+  location.href = "https://bonbonchou.github.io/The_Great_Solar_System_Adventure/index.html";
+}
+
+failRetry.addEventListener('click', restartCurrentLevel);
+failRestart.addEventListener('click', restartWholeGame);
+failSummary.addEventListener('click', endGameSummary);
+
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && isFailOpen){
+    // 失敗窗不允許 ESC 關閉，避免玩家卡在失敗狀態
+    e.preventDefault();
+  }
+});
+
+function gameOver(reason){
+  hp = 0;
+  if(failText){
+    failText.textContent = reason || 'HP 歸零了。要怎麼做？';
+  }
+  renderHand();
+  updateHUD();
+  openFailModal();
+}
+
+function checkNoCardsFail(){
+  if(fuel >= targetFuel){
+    return false;
+  }
+  if((drawPile?.length ?? 0) === 0 && (hand?.length ?? 0) === 0){
+    gameOver('牌庫和手牌都用完了。要怎麼做？');
+    return true;
+  }
+  return false;
+}
+
+/* =========================================================
+   補給（出牌） / 丟棄（棄牌）
+========================================================= */
+btnPlay.addEventListener('click', ()=>{
+  const ids = getSelectedCardIds();
+  if(ids.length === 0) return;
+
+  if(hp <= 0){
+    showToastText('沒有 HP 了', 1000);
+    return;
+  }
+
+  armConsumablesBeforeSupply();
+
+  const outCards = removeCardsFromHandByIds(ids);
+
+  // ✅ 這次補給在本關中的「次數」（用來判斷扣血）
+  supplyCountInStage += 1;
+  const stageCountForThisSupply = supplyCountInStage;
+
+  // ✅ 結算
+  const result = resolveSupply(outCards, stageCountForThisSupply);
+  fuel += result.fuelGain;
+
+  // ✅ 牌如何回收/移除
+  const keepAllThisTime = !!tempEffects.nextSupplyNoRemove; // 一次性
+  const keepFaceThisTime = ownedTools.has("補給將不會移除人頭牌");
+  const reduceRemovalThisTime =
+    ownedTools.has("在【稀薄/缺乏大氣】星球，每次補給移除的牌隨機少 1 張")
+    && hasLevelTrait("稀薄/缺乏大氣");
+
+  function spareOneRemovedCard(removedCards){
+    if(!reduceRemovalThisTime || removedCards.length === 0) return;
+    const idx = Math.floor(Math.random() * removedCards.length);
+    const [spared] = removedCards.splice(idx, 1);
+    drawPile.push(spared);
+    shuffle(drawPile);
+  }
+
+  if(keepAllThisTime){
+    drawPile.push(...outCards);
+    shuffle(drawPile);
+    tempEffects.nextSupplyNoRemove = false;
+  }else if(keepFaceThisTime){
+    const back = [];
+    const removed = [];
+    outCards.forEach(c=>{
+      if(isFaceCard(c)) back.push(c);
+      else removed.push(c);
+    });
+    if(back.length){
+      drawPile.push(...back);
+      shuffle(drawPile);
+    }
+    spareOneRemovedCard(removed);
+    if(removed.length){
+      played.push(...removed);
+    }
+  }else{
+    const removed = [...outCards];
+    spareOneRemovedCard(removed);
+    if(removed.length){
+      played.push(...removed);
+    }
+  }
+
+  // ✅ 補牌（若有「超上限抽牌」效果 → 下次補牌少 1）
+  const targetHandSize = Math.min(HAND_SIZE, HAND_SIZE_MAX);
+  const refillCount = Math.max(0, targetHandSize - hand.length);
+  drawFromPile(refillCount);
+
+  // ✅ 扣血
+  if(result.hpDelta < 0){
+    hp += result.hpDelta;
+    if(hp <= 0){
+      hp = 0;
+      renderHand();
+      updateHUD();
+      gameOver();
+      return;
+    }
+  }
+
+  // ✅ 5張補給 +1棄牌
+  if(result.extraDiscards){
+    levelExtraDiscards += result.extraDiscards;
+    discardsLeft += result.extraDiscards;
+  }
+
+  renderHand();
+  updateHUD();
+
+  showToastText(`${result.type} +${result.fuelGain} 燃料`, 1500);
+
+  if(fuel >= targetFuel){
+    passLevel();
+    return;
+  }
+  if(checkNoCardsFail()){
+    return;
+  }
+});
+
+btnDiscard.addEventListener('click', ()=>{
+  const ids = getSelectedCardIds();
+  if(ids.length === 0) return;
+
+  const canUseFreeDiscard =
+    ownedTools.has("在【可能存在生命】星球的首次棄牌不消耗次數")
+    && hasLevelTrait("可能存在生命")
+    && !freeDiscardUsedInLevel;
+
+  if(discardsLeft <= 0){
+    showToastText('本關棄牌用完', 1000);
+    return;
+  }
+
+  // 1) 先把棄牌從手牌移除（暫存）
+  const discardCards = removeCardsFromHandByIds(ids);
+
+  // 2) 先抽牌補回手牌（避免立刻抽回同張）
+  drawFromPile(discardCards.length);
+
+  // 3) 再把棄牌放回牌庫並洗牌
+  drawPile.push(...discardCards);
+  shuffle(drawPile);
+
+  const freeDiscardThisTime = canUseFreeDiscard;
+  if(freeDiscardThisTime){
+    freeDiscardUsedInLevel = true;
+  }else{
+    discardsLeft -= 1;
+  }
+  // ✅ 道具：每棄1張牌，下次補給 +5%
+  if(ownedTools.has("每棄1張牌，下次補給獲得燃料 +5%")){
+    tempEffects.nextSupplyFuelPctFromDiscard += 0.05 * discardCards.length;
+    tempEffects.nextSupplyFuelPctFromDiscard = Math.min(1.0, tempEffects.nextSupplyFuelPctFromDiscard);
+  }
+
+  renderHand();
+  updateHUD();
+
+  showToastText(`丟棄：${discardCards.length} 張`, 800);
+});
+
+const shopBtn = document.getElementById('shop-btn');
+shopBtn.addEventListener('click', openShop);
+
+/* =========================================================
+   規則內容（任意增減頁數）
+========================================================= */
+const RULE_PAGES = [
+  {
+    title: "基本玩法",
+    body: [
+      "每次補給最多選 5 張牌。",
+      "依牌型獲得燃料，燃料達標即可通關。",
+      "補給使用過的牌會移出牌庫，再從牌庫抽牌補滿手牌。",
+      "進入新大關時，移出的牌會補充回牌庫。",
+      "不同星球有不同特性，針對其特性善用道具和補給的牌型能帶來意想不到的效果哦！"
+    ]
+  },
+  {
+    title: "丟棄規則",
+    body: [
+      "每關丟棄次數上限 3 次 (若無道具加成)。",
+      "每次丟棄最多選 5 張牌。",
+      "丟棄的牌會重回牌庫，再從牌庫抽牌補滿手牌。"
+    ]
+  },
+  {
+    title: "商店",
+    body: [
+      "通關時會獲得金幣，同時商店會刷新商品。",
+      "利用金幣購買道具和消耗品，購買後立即生效。",
+      "道具為永久效果；消耗品為一次性。",
+      "已擁有的物品可出售，售價為購買價的一半，出售後即失效。"
+    ]
+  },
+  // 表格頁
+  {
+    title: "牌型對應燃料",
+    table: {
+      headers: ["牌型", "燃料", "加成星球", "倍率"],
+      rows: [
+        ["高牌", "15", "", ""],
+        ["一對", "25", "", ""],
+        ["兩對", "35", "衛星", "1.5×"],
+        ["三條", "45", "矮行星", "1.5×"],
+        ["順子", "55", "岩石行星", "1.5×"],
+        ["同花", "60", "冰巨行星", "1.5×"],
+        ["葫蘆", "70", "氣體巨行星", "1.5×"],
+        ["鐵支", "130", "", ""],
+        ["同花順", "220", "", ""],
+        ["皇家同花順", "350", "", ""]
+      ]
+    }
+  },
+];
+/* =========================================================
+   規則 Overlay（多頁）
+========================================================= */
+const rulesBtn = document.getElementById('rules-btn');
+const rulesOverlay = document.getElementById('rules-overlay');
+const rulesClose = document.getElementById('rules-close');
+const rulesPrev = document.getElementById('rules-prev');
+const rulesNext = document.getElementById('rules-next');
+const rulesBody = document.getElementById('rules-body');
+
+let isRulesOpen = false;
+let rulesPageIndex = 0;
+
+function openRules(){
+  isRulesOpen = true;
+  rulesOverlay.classList.add('show');
+
+  // 暫停遊戲 + 不讓商店疊開
+  setGamePaused(true);
+  shopBtn.style.pointerEvents = 'none';
+
+  // ✅ 重要：開的瞬間就 render
+  renderRulesPages();
+}
+
+function closeRules(){
+  isRulesOpen = false;
+  rulesOverlay.classList.remove('show');
+
+  shopBtn.style.pointerEvents = 'auto';
+
+  // 若商店還開著就維持暫停，否則恢復
+  if(isShopOpen){
+    setGamePaused(true);
+  }else{
+    setGamePaused(false);
+  }
+}
+const rulesPageIndicator = document.getElementById('rules-page-indicator');
+
+function escapeHtml(s){
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#39;");
+}
+
+function renderRulesPages(){
+  if(!rulesBody){
+    console.warn('[Rules] #rules-body not found');
+    return;
+  }
+  if(!RULE_PAGES || RULE_PAGES.length === 0){
+    rulesBody.innerHTML = `<div style="opacity:0.8;">（尚未設定規則內容）</div>`;
+    rulesPrev.disabled = true;
+    rulesNext.disabled = true;
+    rulesPageIndicator.textContent = `第 0 / 0 頁`;
+    return;
+  }
+
+  rulesPageIndex = Math.max(0, Math.min(rulesPageIndex, RULE_PAGES.length - 1));
+  const page = RULE_PAGES[rulesPageIndex];
+
+  // 標題
+  let html = `
+    <div style="font-size:1.25em; font-weight:800; color:#00ffcc; margin-bottom:10px;">
+      ${escapeHtml(page.title)}
+    </div>
+  `;
+
+  // 內容：表格 or 文字
+  if(page.table){
+    const ths = page.table.headers.map(h => `<th>${escapeHtml(h)}</th>`).join('');
+    const trs = page.table.rows.map(row=>{
+      return `<tr>${row.map((cell,i)=>{
+        const cls = (i === row.length - 1 && /^[0-9]/.test(String(cell))) ? 'num' : '';
+        const isFuelCol = (i === 1); // 第二欄
+        const className = [
+          cls,
+          isFuelCol ? 'num' : ''
+        ].join(' ').trim();
+
+        return `<td class="${className}">${escapeHtml(cell)}</td>`;
+
+      }).join('')}</tr>`;
+    }).join('');
+
+    html += `
+      <table class="rules-table">
+        <thead><tr>${ths}</tr></thead>
+        <tbody>${trs}</tbody>
+      </table>
+    `;
+  }else{
+    const lines = (page.body || []).map(t => `
+    <div style="display:flex; gap:12px;">
+          <span>•</span>
+          <span>${escapeHtml(t)}</span>
+        </div>
+    `).join('');
+    html += `<div style="display:flex; flex-direction:column; gap:10px;">${lines}</div>`;
+  }
+
+  rulesBody.innerHTML = html;
+
+  // 頁碼
+  rulesPageIndicator.textContent = `第 ${rulesPageIndex + 1} / ${RULE_PAGES.length} 頁`;
+
+  rulesPrev.disabled = (rulesPageIndex === 0);
+  rulesNext.disabled = (rulesPageIndex === RULE_PAGES.length - 1);
+}
+
+// 事件
+rulesBtn.addEventListener('click', ()=>{
+  if(isShopOpen) return;
+  openRules();
+});
+rulesClose.addEventListener('click', closeRules);
+
+rulesPrev.addEventListener('click', ()=>{
+  if(rulesPageIndex <= 0) return;
+  rulesPageIndex--;
+  renderRulesPages();
+});
+rulesNext.addEventListener('click', ()=>{
+  if(rulesPageIndex >= RULE_PAGES.length - 1) return;
+  rulesPageIndex++;
+  renderRulesPages();
+});
+
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && isRulesOpen) closeRules();
+});
+
+/* =========================================================
+   初始化
+========================================================= */
+function loadProgress(){
+  const raw = localStorage.getItem('gameState');
+  return raw ? JSON.parse(raw) : null;
+}
+
+function applyProgress(state){
+  // ✅ 用 levelIndex 作為唯一關卡定位
+  levelIndex = state.levelIndex ?? 0;
+
+  // 取出該關資料（燃料門檻/大關/星球名...）
+  const info = LEVELS[levelIndex] || LEVELS[0];
+
+  bigStage = info.stage;
+
+  // ✅ fuel / targetFuel
+  fuel = state.fuel ?? 0;
+  targetFuel = state.targetFuel ?? info.targetFuel; // 以存檔為主，沒有就用表
+
+  bigStageClearCount = state.bigStageClearCount ?? 0;
+
+  // ✅ HP / maxHP（依當前大關重新計算，並把 hp 夾在 0~maxHP）
+  maxHP = computeMaxHP();
+  hp = Math.max(0, state.hp ?? maxHP);
+
+  // ✅ 棄牌 / 補給計數 / 手牌上限
+  extraDiscards = state.extraDiscards ?? 0;
+  discardsLeft = state.discardsLeft ?? (DISCARD_PER_LEVEL + extraDiscards);
+  supplyCountInStage = state.supplyCountInStage ?? 0;
+  HAND_SIZE = Math.min(state.HAND_SIZE ?? 8, HAND_SIZE_MAX);
+  supplyBonusPerClear = state.supplyBonusPerClear ?? 0;
+
+  // ✅ 牌堆
+  drawPile = state.drawPile ?? [];
+  hand = state.hand ?? [];
+  played = state.played ?? [];
+
+  // ✅ 金幣/商店/已擁有
+  coins = state.coins ?? coins; // coins 若有預設值就保留
+  shopTools = state.shopTools ?? shopTools;
+  shopConsumables = state.shopConsumables ?? shopConsumables;
+
+  // ownedTools/ownedConsumables 若已經改成 Map+paid 結構，會需要轉回 Map
+  if(state.ownedTools) ownedToolsFromState(state.ownedTools);
+  if(state.ownedConsumables) ownedConsumablesFromState(state.ownedConsumables);
+
+  if(state.tempEffects){
+    tempEffects = {
+      nextSupplyNoRemove: !!state.tempEffects.nextSupplyNoRemove,
+      nextSupplyHandRankPlus1: state.tempEffects.nextSupplyHandRankPlus1 ?? 0,
+      nextSupplyFuelPctFromDiscard: state.tempEffects.nextSupplyFuelPctFromDiscard ?? 0,
+      nextSupplyFuelMult: state.tempEffects.nextSupplyFuelMult ?? 1,
+      nextSupplyLowHandBonus: state.tempEffects.nextSupplyLowHandBonus ?? 0,
+      supplyHpOverride: state.tempEffects.supplyHpOverride ?? null,
+    };
+  }
+}
+
+function ownedToolsFromState(obj){
+  ownedTools.clear();
+  Object.entries(obj).forEach(([name, data])=>{
+    ownedTools.set(name, { count: data.count, paid: data.paid || [] });
+  });
+}
+
+function ownedConsumablesFromState(obj){
+  ownedConsumables.clear();
+  Object.entries(obj).forEach(([name, data])=>{
+    ownedConsumables.set(name, { count: data.count, paid: data.paid || [] });
+  });
+}
+
+function ownedToolsToState(){
+  const out = {};
+  ownedTools.forEach((v, k)=>{
+    out[k] = { count: v.count || 0, paid: Array.isArray(v.paid) ? v.paid : [] };
+  });
+  return out;
+}
+
+function ownedConsumablesToState(){
+  const out = {};
+  ownedConsumables.forEach((v, k)=>{
+    out[k] = { count: v.count || 0, paid: Array.isArray(v.paid) ? v.paid : [] };
+  });
+  return out;
+}
+
+let data = {};
+
+function saveProgress(){
+  const datasaved = {
+    // 關卡定位
+    levelIndex,
+    bigStage,
+
+    // 核心數值
+    hp,
+    maxHP,
+    fuel,
+    targetFuel,
+    discardsLeft,
+    extraDiscards,
+    supplyCountInStage,
+    HAND_SIZE,
+    supplyBonusPerClear,
+    bigStageClearCount,
+
+    // 牌堆
+    drawPile,
+    hand,
+    played,
+
+    // 商店 / 經濟
+    coins,
+    shopTools,
+    shopConsumables,
+    ownedTools: ownedToolsToState(),
+    ownedConsumables: ownedConsumablesToState(),
+    tempEffects,
+  };
+
+  data = datasaved;
+
+  //localStorage.setItem('gameState', JSON.stringify(data));
+}
+
+function updateTopUILayout(){
+  const hud = document.getElementById('hud-left');
+  if(!hud) return;
+
+  const rect = hud.getBoundingClientRect();
+  // 以視窗座標算 HUD 底部，轉成「距離畫面頂部的 px」
+  const bottom = Math.round(rect.bottom);
+
+  document.documentElement.style.setProperty('--hud-bottom', `${bottom}px`);
+}
+
+// 初次、resize、以及可能變動時呼叫
+window.addEventListener('resize', updateTopUILayout);
+
+// 如果 HUD 內容會因為文字/數值變長而換行，建議也監聽它
+const hudLeftEl = document.getElementById('hud-left');
+if(hudLeftEl && 'ResizeObserver' in window){
+  new ResizeObserver(updateTopUILayout).observe(hudLeftEl);
+}
+
+function boot(){
+  //const state = loadProgress();
+  const state = data;
+  if(state && Object.keys(state).length > 0){
+    applyProgress(state);
+    if(shopTools.length === 0 && shopConsumables.length === 0){
+      generateShopOffers();
+    }
+    // 若本頁是新一關的開始，在這裡做必要的重置（例如：若手牌是空的就補到 HAND_SIZE）
+    if(hand.length === 0){
+      // 確保牌庫存在，沒有就重置
+      if(!drawPile || drawPile.length === 0){
+        drawPile = [...deck];
+        shuffle(drawPile);
+        played = [];
+      }
+      drawFromPile(HAND_SIZE);
+    }
+    renderHand();
+    updateHUD();
+  }else{
+    // 沒進度 → 當成新遊戲
+    applyTestLevelOverride();
+    startLevel();
+  }
+}
+
+//localStorage.removeItem('gameState'); // 測試完要刪
+boot();
+updateTopUILayout();
+
+/* =========================================================
+   知識頁
+========================================================= */
+
+const stars = [
+  {
+    title: "水星",
+    knowledge: `水星是太陽系中離太陽最近、最小的行星，甚至比一些衛星還小。由於缺乏大氣，水星的日夜溫差非常大，白天溫度高達 400 度，晚上則是零下 180 度。
+    
+    根據信使號的觀測，水星有著全球性磁場，磁場強度是地球的 1%。磁場的來源推測是其內核富含鐵，詳細結果需要等待貝皮可倫坡號確認。`,
+    link: [
+      { text: "NASA：Mercury", url: "https://science.nasa.gov/mercury/facts/"},
+      { text: "展示場 2 樓：太陽系結構", url: "https://sites.google.com/view/tamwebtp/%E4%BA%8C%E6%A8%93%E5%B1%95%E7%A4%BA%E5%8D%80_1/%E5%A4%AA%E9%99%BD%E7%B3%BB/%E5%A4%AA%E9%99%BD%E7%B3%BB%E7%B5%90%E6%A7%8B"},
+      { text: "展示場 2 樓：太陽系內天體的定義和成員", url: "https://sites.google.com/view/tamwebtp/%E4%BA%8C%E6%A8%93%E5%B1%95%E7%A4%BA%E5%8D%80_1/%E5%A4%AA%E9%99%BD%E7%B3%BB/%E5%A4%AA%E9%99%BD%E7%B3%BB%E5%85%A7%E5%A4%A9%E9%AB%94%E7%9A%84%E5%AE%9A%E7%BE%A9%E5%92%8C%E6%88%90%E5%93%A1"},
+      { text: "天文新知：太陽系內可能擁有鑽石層的行星", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=D2A26E8BF434225E"},
+      { text: "天文新知：貝皮可倫坡號第6次飛掠水星的3張最佳影像", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=F8DBCA7D9D43C951"}
+    ]
+  },
+  {
+    title: "金星",
+    knowledge: `金星是離太陽第二近的行星，它跟地球差不多大，質量是地球的 0.8 倍，半徑是地球的 0.95倍。
+    
+    金星有著濃厚的大氣層，大氣壓力是地球的 90 倍，大氣中有 96% 是二氧化碳，使溫室效應非常嚴重，所以金星表面溫度甚至比水星還高。
+    
+    根據破曉號的觀測，金星大氣中還有硫酸形成的硫酸雲，所以金星下雨的話會下硫酸雨！`,
+    link: [
+      { text: "NASA：Venus", url: "https://science.nasa.gov/venus/venus-facts/"},
+      { text: "展示場 2 樓：太陽系結構", url: "https://sites.google.com/view/tamwebtp/%E4%BA%8C%E6%A8%93%E5%B1%95%E7%A4%BA%E5%8D%80_1/%E5%A4%AA%E9%99%BD%E7%B3%BB/%E5%A4%AA%E9%99%BD%E7%B3%BB%E7%B5%90%E6%A7%8B"},
+      { text: "展示場 2 樓：太陽系內天體的定義和成員", url: "https://sites.google.com/view/tamwebtp/%E4%BA%8C%E6%A8%93%E5%B1%95%E7%A4%BA%E5%8D%80_1/%E5%A4%AA%E9%99%BD%E7%B3%BB/%E5%A4%AA%E9%99%BD%E7%B3%BB%E5%85%A7%E5%A4%A9%E9%AB%94%E7%9A%84%E5%AE%9A%E7%BE%A9%E5%92%8C%E6%88%90%E5%93%A1"},
+      { text: "天文新知：金星上可能有生命嗎？從雲層中再次觀測到磷化氫", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=08A02B9FA085A117"},
+      { text: "天文新知：NASA研究揭示金星地殼驚人秘密", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=F0494914063D6733"}
+    ]
+  },
+  {
+    title: "地球",
+    knowledge: `地球是離太陽第三近的行星，也是一顆美麗且有著生命的行星。
+    
+    科學家到目前為止都還沒在地球以外的地方發現過生命，更別提智慧文明了。不過，天文學家德瑞克提出了「德瑞克方程式」來估計銀河系中可能存在的高等智慧文明數量`,
+    link: [
+      { text: "展示場 1 樓：地球", url: "https://sites.google.com/view/tamwebtp/%E4%B8%80%E6%A8%93%E5%B1%95%E7%A4%BA%E5%8D%80_1/%E5%9C%B0%E7%90%83"},
+      { text: "展示場 3 樓：德瑞克方程式", url: "https://sites.google.com/view/tamwebtp/%E4%B8%89%E6%A8%93%E5%B1%95%E7%A4%BA%E5%8D%80_1/%E6%8E%A2%E7%B4%A2%E5%A4%96%E6%98%9F%E7%94%9F%E5%91%BD/%E5%BE%B7%E7%91%9E%E5%85%8B%E6%96%B9%E7%A8%8B%E5%BC%8F"}
+    ]
+  },
+  {
+    title: "火星",
+    knowledge: `火星是離太陽第四近的行星，也是繼月球後，科學家探索的下一個目標。
+    
+    隨著阿提米絲計劃的推進，人類將首先在月球上建立基地。這不僅是為了科學研究，更是為了登陸火星，打造人類未來可能的地外家園！`,
+    link: [
+      { text: "NASA：Mars", url: "https://science.nasa.gov/mars/facts/"},
+      { text: "NASA：阿提米絲計畫", url: "https://www.nasa.gov/reference/artemis-i-2/"},
+      { text: "天文新知：阿提米絲任務將迎來太空團隊的新紀元", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=4206B349FF3C2D45"},
+      { text: "天文新知：我們對火星為何呈紅色的理解錯了嗎？", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=A732AA24CE9BDCD2"},
+      { text: "天文新知：火星地下有海洋？最新研究再度支持地下水庫存在", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=882F57BFC2FAA7C4"},
+      { text: "天文新知：在火星地表首度觀測到可見光波段的綠色極光", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=D694D552027F0520"}
+    ]
+  },
+  {
+    title: "木星",
+    knowledge: `火星是離太陽第四近的行星，也是繼月球後，科學家探索的下一個目標。
+    
+    隨著阿提米絲計劃的推進，人類將首先在月球上建立基地。這不僅是為了科學研究，更是為了登陸火星，打造人類未來可能的地外家園！`,
+    link: [
+      { text: "NASA：Mars", url: "https://science.nasa.gov/mars/facts/"},
+      { text: "NASA：阿提米絲計畫", url: "https://www.nasa.gov/reference/artemis-i-2/"},
+      { text: "天文新知：阿提米絲任務將迎來太空團隊的新紀元", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=4206B349FF3C2D45"},
+      { text: "天文新知：我們對火星為何呈紅色的理解錯了嗎？", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=A732AA24CE9BDCD2"},
+      { text: "天文新知：火星地下有海洋？最新研究再度支持地下水庫存在", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=882F57BFC2FAA7C4"},
+      { text: "天文新知：在火星地表首度觀測到可見光波段的綠色極光", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=D694D552027F0520"}
+    ]
+  },
+  {
+    title: "艾歐",
+    knowledge: `火星是離太陽第四近的行星，也是繼月球後，科學家探索的下一個目標。
+    
+    隨著阿提米絲計劃的推進，人類將首先在月球上建立基地。這不僅是為了科學研究，更是為了登陸火星，打造人類未來可能的地外家園！`,
+    link: [
+      { text: "NASA：Mars", url: "https://science.nasa.gov/mars/facts/"},
+      { text: "NASA：阿提米絲計畫", url: "https://www.nasa.gov/reference/artemis-i-2/"},
+      { text: "天文新知：阿提米絲任務將迎來太空團隊的新紀元", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=4206B349FF3C2D45"},
+      { text: "天文新知：我們對火星為何呈紅色的理解錯了嗎？", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=A732AA24CE9BDCD2"},
+      { text: "天文新知：火星地下有海洋？最新研究再度支持地下水庫存在", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=882F57BFC2FAA7C4"},
+      { text: "天文新知：在火星地表首度觀測到可見光波段的綠色極光", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=D694D552027F0520"}
+    ]
+  },
+  {
+    title: "歐羅巴",
+    knowledge: `火星是離太陽第四近的行星，也是繼月球後，科學家探索的下一個目標。
+    
+    隨著阿提米絲計劃的推進，人類將首先在月球上建立基地。這不僅是為了科學研究，更是為了登陸火星，打造人類未來可能的地外家園！`,
+    link: [
+      { text: "NASA：Mars", url: "https://science.nasa.gov/mars/facts/"},
+      { text: "NASA：阿提米絲計畫", url: "https://www.nasa.gov/reference/artemis-i-2/"},
+      { text: "天文新知：阿提米絲任務將迎來太空團隊的新紀元", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=4206B349FF3C2D45"},
+      { text: "天文新知：我們對火星為何呈紅色的理解錯了嗎？", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=A732AA24CE9BDCD2"},
+      { text: "天文新知：火星地下有海洋？最新研究再度支持地下水庫存在", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=882F57BFC2FAA7C4"},
+      { text: "天文新知：在火星地表首度觀測到可見光波段的綠色極光", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=D694D552027F0520"}
+    ]
+  },
+  {
+    title: "土星",
+    knowledge: `火星是離太陽第四近的行星，也是繼月球後，科學家探索的下一個目標。
+    
+    隨著阿提米絲計劃的推進，人類將首先在月球上建立基地。這不僅是為了科學研究，更是為了登陸火星，打造人類未來可能的地外家園！`,
+    link: [
+      { text: "NASA：Mars", url: "https://science.nasa.gov/mars/facts/"},
+      { text: "NASA：阿提米絲計畫", url: "https://www.nasa.gov/reference/artemis-i-2/"},
+      { text: "天文新知：阿提米絲任務將迎來太空團隊的新紀元", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=4206B349FF3C2D45"},
+      { text: "天文新知：我們對火星為何呈紅色的理解錯了嗎？", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=A732AA24CE9BDCD2"},
+      { text: "天文新知：火星地下有海洋？最新研究再度支持地下水庫存在", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=882F57BFC2FAA7C4"},
+      { text: "天文新知：在火星地表首度觀測到可見光波段的綠色極光", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=D694D552027F0520"}
+    ]
+  },
+  {
+    title: "天王星",
+    knowledge: `火星是離太陽第四近的行星，也是繼月球後，科學家探索的下一個目標。
+    
+    隨著阿提米絲計劃的推進，人類將首先在月球上建立基地。這不僅是為了科學研究，更是為了登陸火星，打造人類未來可能的地外家園！`,
+    link: [
+      { text: "NASA：Mars", url: "https://science.nasa.gov/mars/facts/"},
+      { text: "NASA：阿提米絲計畫", url: "https://www.nasa.gov/reference/artemis-i-2/"},
+      { text: "天文新知：阿提米絲任務將迎來太空團隊的新紀元", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=4206B349FF3C2D45"},
+      { text: "天文新知：我們對火星為何呈紅色的理解錯了嗎？", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=A732AA24CE9BDCD2"},
+      { text: "天文新知：火星地下有海洋？最新研究再度支持地下水庫存在", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=882F57BFC2FAA7C4"},
+      { text: "天文新知：在火星地表首度觀測到可見光波段的綠色極光", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=D694D552027F0520"}
+    ]
+  },
+  {
+    title: "海王星",
+    knowledge: `火星是離太陽第四近的行星，也是繼月球後，科學家探索的下一個目標。
+    
+    隨著阿提米絲計劃的推進，人類將首先在月球上建立基地。這不僅是為了科學研究，更是為了登陸火星，打造人類未來可能的地外家園！`,
+    link: [
+      { text: "NASA：Mars", url: "https://science.nasa.gov/mars/facts/"},
+      { text: "NASA：阿提米絲計畫", url: "https://www.nasa.gov/reference/artemis-i-2/"},
+      { text: "天文新知：阿提米絲任務將迎來太空團隊的新紀元", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=4206B349FF3C2D45"},
+      { text: "天文新知：我們對火星為何呈紅色的理解錯了嗎？", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=A732AA24CE9BDCD2"},
+      { text: "天文新知：火星地下有海洋？最新研究再度支持地下水庫存在", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=882F57BFC2FAA7C4"},
+      { text: "天文新知：在火星地表首度觀測到可見光波段的綠色極光", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=D694D552027F0520"}
+    ]
+  },
+  {
+    title: "冥王星",
+    knowledge: `火星是離太陽第四近的行星，也是繼月球後，科學家探索的下一個目標。
+    
+    隨著阿提米絲計劃的推進，人類將首先在月球上建立基地。這不僅是為了科學研究，更是為了登陸火星，打造人類未來可能的地外家園！`,
+    link: [
+      { text: "NASA：Mars", url: "https://science.nasa.gov/mars/facts/"},
+      { text: "NASA：阿提米絲計畫", url: "https://www.nasa.gov/reference/artemis-i-2/"},
+      { text: "天文新知：阿提米絲任務將迎來太空團隊的新紀元", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=4206B349FF3C2D45"},
+      { text: "天文新知：我們對火星為何呈紅色的理解錯了嗎？", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=A732AA24CE9BDCD2"},
+      { text: "天文新知：火星地下有海洋？最新研究再度支持地下水庫存在", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=882F57BFC2FAA7C4"},
+      { text: "天文新知：在火星地表首度觀測到可見光波段的綠色極光", url: "https://tam.gov.taipei/News_Content.aspx?n=EF86D8AF23B9A85B&sms=F32C4FF0AC5C2801&s=D694D552027F0520"}
+    ]
+  }
+]
+
+function renderStar(index) {
+  closePassModal();
+  document.getElementById("game-screen").classList.add("hidden");
+  document.getElementById("info-screen").classList.remove("hidden");
+
+  const star = stars[index];
+
+  document.getElementById("knowledge-title").textContent = star.title;
+  document.getElementById("knowledge-text").innerHTML = formatknowledge(star.knowledge);
+
+  // 連結處理
+  const linkArea = document.getElementById("info-link");
+  const info = stars[index];
+  const link = info && info.link;
+  if (link) {
+    linkArea.innerHTML = "<p>相關內容</p>";
+
+    if (Array.isArray(link)) { // 多個網址
+      link.forEach(l => {
+        linkArea.innerHTML += `<a href="${l.url}" target="_blank" style="display:block; color:#00ccff;">${l.text}</a>`;
+      });
+    }
+    else if (link.url && link.text) { // 單一網址
+      linkArea.innerHTML += `<a href="${link.url}" target="_blank" style="display:block; color:#00ccff;">${link.text}</a>`;
+    }
+    linkArea.classList.remove("hidden");
+  } else { // 沒有網址
+    linkArea.innerHTML = "";
+    linkArea.classList.add("hidden");
+  }
+}
+
+function nextStar() {
+  const prevStage = LEVELS[levelIndex]?.stage ?? null;
+  levelIndex += 1;
+  resetLevelState();
+  const nextStage = LEVELS[levelIndex]?.stage ?? null;
+  if(prevStage && nextStage && prevStage !== nextStage){
+    initBigStageResetDeck();
+    hand = [];
+    supplyCountInStage = 0;
+  }
+  saveProgress();
+
+  document.getElementById("info-screen").classList.add("hidden");
+
+  if (data.levelIndex > 10) {
+    document.getElementById("final-screen").classList.remove("hidden");
+    document.getElementById("endscore-display").textContent = '你的成績：闖出太陽系';
+  } else {
+    document.getElementById("game-screen").classList.remove("hidden");
+    boot();
+  }
+}
+
+function formatknowledge(knowledge) {
+  return knowledge
+  .replace(/\n/g, '<br>') // 若你 intro 裡是用換行符號斷行，也可以加這行
+  .replace(/\s{2,}/g, ''); // 清除多餘空白
+}
+
+</script>
 
 </body>
 </html>
