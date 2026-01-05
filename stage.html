@@ -126,7 +126,7 @@ body{
   background:#5bff71;
 }
 .action-btn.sum:hover{
-  background:#ff8a8a;
+  background:#8aff9c;
 }
 
 /* ===== 卡牌 ===== */
@@ -823,6 +823,7 @@ h4 {
 }
 
   .endscore-display {
+  text-align: center;
   margin-top: 1em;
   font-size: 1.8em;
   color: #00ffcc;
@@ -1000,11 +1001,11 @@ h4 {
 ========================================================= -->
 <div class="container">
   <div id="final-screen" class="hidden">
-    <h1>🌟 遊戲結束！</h1>
-    <h4>在這場橫跨太陽系的航行中，<br>你降落過炙熱的行星、<br>也踏上冰封而遙遠的世界，<br>一次次補給燃料。<br>一次次承受宇宙帶來的考驗。<br><br>在這廣袤無垠的宇宙中，<br>每顆星球都有它獨特的樣貌，</h4>
+    <h1 style="text-align: center;">🌟 遊戲結束！</h1>
+    <h4 style="text-align: center;">在這場橫跨太陽系的航行中，<br>你降落過炙熱的行星、<br>也踏上冰封而遙遠的世界，<br>一次次補給燃料。<br>一次次承受宇宙帶來的考驗。<br><br>在這廣袤無垠的宇宙中，<br>每顆星球都有它獨特的樣貌，</h4>
     <h2 id="final-highlight">雖為滄海一粟，<br>卻於渺小中，誕生意義。</h2>
     <div class="endscore-display" id="endscore-display"></div>
-    <button onclick="restartWholeGame()" class="action-btn">重闖太陽系</button>
+    <button onclick="restartWholeGame()" class="action-btn" style="display: block; margin: 0 auto; margin-top: 10pt;">重闖太陽系</button>
   </div>
 </div>
 
@@ -1030,7 +1031,7 @@ const TEST_FORCE_SHOP = {
     "下一次補給若為高牌/一對/兩對， +25 燃料",
     "扣血頻率改為4次補給，持續一關",
   ],
-  levelIndex: 10,
+  levelIndex: 6,
 
   startHP: null,
   initialHand: [
