@@ -1022,14 +1022,15 @@ h4 {
 const TEST_FORCE_SHOP = {
   enabled: true, // 要正常抽就改 false
   tools: [
-    "最大 HP +1",
-    "每通過一大關，最大 HP +1",
+    "在【極端低溫】星球的首次補給 +15 燃料",
+    "若本關未使用棄牌，通關金幣 +30%",
     //"順子牌型每張牌可相差1點",
   ],
   consumables: [
-    "立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫",
+    "下一次補給若為高牌/一對/兩對， +25 燃料",
+    "扣血頻率改為4次補給，持續一關",
   ],
-  levelIndex: 7,
+  levelIndex: 0,
 
   startHP: null,
   initialHand: [
@@ -1038,7 +1039,7 @@ const TEST_FORCE_SHOP = {
     { suit:'D', rank:'Q'},
     { suit:'D', rank:'J'},
     { suit:'D', rank:'T'},
-    { suit:'D', rank:'8'},
+    { suit:'S', rank:'A'},
     { suit:'D', rank:'9'},
     ],
 };
@@ -1190,13 +1191,13 @@ const LEVELS = [
   // 第一大關
   { stage:1, name:"水星", targetFuel:60, passCoins:10, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/mercury.png", traits:["極端溫差","稀薄/缺乏大氣"] },
   { stage:1, name:"金星", targetFuel:70, passCoins:12, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/venus.png", traits:["高壓環境","地質高度活躍"] },
-  { stage:1, name:"地球", targetFuel:80, passCoins:14, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/earth.png", traits:["地質高度活躍","生命或文明干擾"] },
+  { stage:1, name:"地球", targetFuel:80, passCoins:14, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/earth.png", traits:["地質高度活躍","可能存在生命"] },
   { stage:1, name:"火星", targetFuel:90, passCoins:16, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/mars.png", traits:["極端溫差","稀薄/缺乏大氣"] },
 
   // 第二大關
   { stage:2, name:"木星", targetFuel:140, passCoins:22, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/jupiter.png", traits:["高壓環境","極端氣候"] },
   { stage:2, name:"艾歐", targetFuel:160, passCoins:25, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/io.png", traits:["稀薄/缺乏大氣","地質高度活躍","極端低溫"] },
-  { stage:2, name:"歐羅巴", targetFuel:175, passCoins:28, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/europa.png", traits:["稀薄/缺乏大氣","生命或文明干擾","極端低溫"] },
+  { stage:2, name:"歐羅巴", targetFuel:175, passCoins:28, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/europa.png", traits:["稀薄/缺乏大氣","可能存在生命","極端低溫"] },
   { stage:2, name:"土星", targetFuel:190, passCoins:32, image:"https://raw.githubusercontent.com/BonBonChou/The_Great_Solar_System_Adventure/main/images/saturn.png", traits:["高壓環境"] },
 
   // 第三大關
@@ -1297,8 +1298,6 @@ function resetLevelState(){
     nextSupplyFuelPctFromDiscard: 0,      // 道具：每棄1張牌，下次補給 +5%（累積到下一次補給後清空）
     nextSupplyFuelMult: 1,                // 道具：高牌的下次補給 +50%（一次性倍率）
 
-    freeSupplyUses: 0,                    // 消耗品/道具：額外一次補給（不計入扣血頻率）
-
     nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
     supplyHpOverride: null,
   };
@@ -1324,8 +1323,6 @@ let tempEffects = {
 
   nextSupplyFuelPctFromDiscard: 0,      // 道具：每棄1張牌，下次補給 +5%（累積到下一次補給後清空）
   nextSupplyFuelMult: 1,                // 道具：高牌的下次補給 +50%（一次性倍率）
-
-  freeSupplyUses: 0,                    // 消耗品/道具：額外一次補給（不計入扣血頻率）
 
   nextSupplyLowHandBonus: 0,            // 消耗品：下一次若為 高牌/一對/兩對，+25 燃料（一次性）
   supplyHpOverride: null,               // 例如 { per:4 }：本關扣血頻率改 4
@@ -1480,14 +1477,13 @@ const TOOL_DATA = [
   { name:"最大 HP +1", price:[15,18,21,24], max:4, sellable:false },
   { name:"每通過一大關，最大 HP +1", price:[30], max:1 },
   { name:"每關免疫第一次傷害", price:[28], max:1 },
-  { name:"使用鐵支/同花順/皇家同花順時，額外獲得一次補給", price:[36], max:1 },
 
   { name:"在【極端溫差】星球補給 +15% 燃料", price:[18], max:1 },
   { name:"在【稀薄/缺乏大氣】星球，每次補給移除的牌隨機少 1 張", price:[20], max:1 },
   { name:"在【高壓環境】星球補給 +10 燃料", price:[16], max:1 },
   { name:"在【極端氣候】星球的首次補給 +20% 燃料", price:[16], max:1 },
   { name:"在【地質高度活躍】星球的補給包含 3 張或以下時，燃料 +25%", price:[18], max:1 },
-  { name:"在【生命或文明干擾】星球的首次棄牌不消耗次數", price:[18], max:1 },
+  { name:"在【可能存在生命】星球的首次棄牌不消耗次數", price:[18], max:1 },
   { name:"在【極端低溫】星球的首次補給 +15 燃料", price:[18], max:1 },
 
   // 固定道具（永遠在商店，放最後）
@@ -1500,7 +1496,6 @@ const CONSUMABLE_DATA = [
   { name:"立即回復 2 HP", price:14, sellable:false },
   { name:"在【極端低溫】星球的下一次補給 +30% 燃料", price:12 },
   { name:"下一次補給使用的牌全部不移除", price:16 },
-  { name:"獲得額外一次補給", price:20 },
   { name:"下一次補給的牌型等級 +1", price:18 },
   { name:"下一次補給若為高牌/一對/兩對， +25 燃料", price:16 },
   { name:"立即從牌庫中抽 2 張、選 1 張加入手牌，另一張棄回牌庫", price:14, sellable:false }
@@ -2199,14 +2194,6 @@ function resolveSupply(outCards, stageCountForThisSupply){
     tempEffects.nextSupplyFuelMult = Math.max(tempEffects.nextSupplyFuelMult, 1.5);
   }
 
-  /* ===== 額外補給（不計入扣血頻率）===== */
-  if(
-    ownedTools.has("使用鐵支/同花順/皇家同花順時，額外獲得一次補給") &&
-    (type === "鐵支" || type === "同花順" || type === "皇家同花順")
-  ){
-    tempEffects.freeSupplyUses += 1;
-  }
-
   /* ===== HP 結算（✅修 bug：用 stageCountForThisSupply 判斷）===== */
   let hpDelta = 0;
   const hpRule = tempEffects.supplyHpOverride?.per
@@ -2258,20 +2245,14 @@ function armConsumablesBeforeSupply(){
     consumeConsumable("下一次補給若為高牌/一對/兩對， +25 燃料");
   }
 
-  // 4) 額外一次補給（一次性，轉成 freeSupplyUses）
-  if(tempEffects.freeSupplyUses <= 0 && hasConsumable("獲得額外一次補給")){
-    tempEffects.freeSupplyUses += 1;
-    consumeConsumable("獲得額外一次補給");
-  }
-
-  // 5) 扣血頻率改為 4 次補給（持續一關）
+  // 4) 扣血頻率改為 4 次補給（持續一關）
   // 規則：同一關若已生效則忽略（不消耗），留到下一關再用。
   if(!tempEffects.supplyHpOverride && hasConsumable("扣血頻率改為4次補給，持續一關")){
     tempEffects.supplyHpOverride = { per: 4 };
     consumeConsumable("扣血頻率改為4次補給，持續一關");
   }
 
-  // 6) 極端低溫：下一次補給 +30%（一次性）
+  // 5) 極端低溫：下一次補給 +30%（一次性）
   if(hasConsumable("在【極端低溫】星球的下一次補給 +30% 燃料") && hasLevelTrait("極端低溫")){
     // （與高牌+50%共存）
     tempEffects.nextSupplyFuelMult = Math.max(tempEffects.nextSupplyFuelMult, 1.3);
@@ -2524,11 +2505,11 @@ function isStraightWithGap1(vals){
 function handTypeUpgraded(type, step){
   if(!step) return type;
 
-  const i = order.indexOf(type);
+  const i = HAND_TYPE_ORDER.indexOf(type);
   if(i === -1) return type;
 
-  const j = Math.min(order.length - 1, i + step);
-  return order[j];
+  const j = Math.min(HAND_TYPE_ORDER.length - 1, i + step);
+  return HAND_TYPE_ORDER[j];
 }
 
 function evaluateHand(cards){
@@ -2849,11 +2830,8 @@ btnPlay.addEventListener('click', ()=>{
 
   const outCards = removeCardsFromHandByIds(ids);
 
-  // ✅ 本次是否 freeSupply（不增加扣血頻率計數）
-  const isFreeSupply = (tempEffects.freeSupplyUses > 0);
-
   // ✅ 這次補給在本關中的「次數」（用來判斷扣血）
-  const stageCountForThisSupply = supplyCountInStage + (isFreeSupply ? 0 : 1);
+  const stageCountForThisSupply = supplyCountInStage;
 
   // ✅ 結算
   const result = resolveSupply(outCards, stageCountForThisSupply);
@@ -2906,14 +2884,6 @@ btnPlay.addEventListener('click', ()=>{
   const refillCount = Math.max(0, targetHandSize - hand.length);
   drawFromPile(refillCount);
 
-
-  // ✅ 本關補給次數（freeSupply 不增加）
-  if(isFreeSupply){
-    tempEffects.freeSupplyUses -= 1;
-  }else{
-    supplyCountInStage += 1;
-  }
-
   // ✅ 扣血
   if(result.hpDelta < 0){
     hp += result.hpDelta;
@@ -2951,8 +2921,8 @@ btnDiscard.addEventListener('click', ()=>{
   if(ids.length === 0) return;
 
   const canUseFreeDiscard =
-    ownedTools.has("在【生命或文明干擾】星球的首次棄牌不消耗次數")
-    && hasLevelTrait("生命或文明干擾")
+    ownedTools.has("在【可能存在生命】星球的首次棄牌不消耗次數")
+    && hasLevelTrait("可能存在生命")
     && !freeDiscardUsedInLevel;
 
   if(discardsLeft <= 0){
@@ -3232,7 +3202,6 @@ function applyProgress(state){
       nextSupplyHandRankPlus1: state.tempEffects.nextSupplyHandRankPlus1 ?? 0,
       nextSupplyFuelPctFromDiscard: state.tempEffects.nextSupplyFuelPctFromDiscard ?? 0,
       nextSupplyFuelMult: state.tempEffects.nextSupplyFuelMult ?? 1,
-      freeSupplyUses: state.tempEffects.freeSupplyUses ?? 0,
       nextSupplyLowHandBonus: state.tempEffects.nextSupplyLowHandBonus ?? 0,
       supplyHpOverride: state.tempEffects.supplyHpOverride ?? null,
     };
