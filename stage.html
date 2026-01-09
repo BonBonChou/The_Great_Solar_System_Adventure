@@ -8,7 +8,7 @@
 <style>
 body{
   margin:0;
-  background:#000;
+  background:transparent;
   font-family:'Noto Sans TC',sans-serif;
   color:#fff;
 }
@@ -789,6 +789,7 @@ body{
 #info-screen .action-btn {
   display: block; /* 變成區塊元素 */
   margin: 0 auto; /* 自動左右外距，水平置中 */
+  margin-top: 10pt;
   min-width: 120px;
 }
 
@@ -822,11 +823,18 @@ h4 {
   animation: rainbow 2s ease infinite;
 }
 
-  .endscore-display {
+.endscore-display {
   text-align: center;
   margin-top: 1em;
   font-size: 1.8em;
   color: #00ffcc;
+}
+
+#final-screen .action-btn {
+  display: block; /* 變成區塊元素 */
+  margin: 0 auto; /* 自動左右外距，水平置中 */
+  margin-top: 10pt;
+  min-width: 140px;
 }
 
 </style>
@@ -992,7 +1000,7 @@ h4 {
       <p id="knowledge-text"></p>
     </div>
     <div id="info-link" class="hidden"></div>
-    <button onclick="nextStar()" class="action-btn" style="display: block; margin: 0 auto; margin-top: 10pt;">繼續</button>
+    <button onclick="nextStar()" class="action-btn">繼續</button>
   </div>
 </div>
 
@@ -1005,7 +1013,7 @@ h4 {
     <h4 style="text-align: center;">在這場橫跨太陽系的航行中，<br>你降落過炙熱的行星、<br>也踏上冰封而遙遠的世界，<br>一次次補給燃料。<br>一次次承受宇宙帶來的考驗。<br><br>在這廣袤無垠的宇宙中，<br>每顆星球都有它獨特的樣貌，</h4>
     <h2 id="final-highlight">雖為滄海一粟，<br>卻於渺小中，誕生意義。</h2>
     <div class="endscore-display" id="endscore-display"></div>
-    <button onclick="restartWholeGame()" class="action-btn" style="display: block; margin: 0 auto; margin-top: 10pt;">重闖太陽系</button>
+    <button onclick="restartWholeGame()" class="action-btn">重闖太陽系</button>
   </div>
 </div>
 
@@ -1021,7 +1029,7 @@ h4 {
    - enabled=false 時完全不影響正常抽樣
 ========================================================= */
 const TEST_FORCE_SHOP = {
-  enabled: true, // 要正常抽就改 false
+  enabled: false, // 要正常抽就改 false
   tools: [
     "在【極端低溫】星球的首次補給 +15 燃料",
     "若本關未使用棄牌，通關金幣 +30%",
