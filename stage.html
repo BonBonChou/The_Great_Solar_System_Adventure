@@ -647,6 +647,68 @@ body{
   font-weight:800;
 }
 
+/* ===== 隨機事件 Overlay ===== */
+#random-event-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.75);
+  z-index:1000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+#random-event-overlay.show{ display:flex; }
+
+#random-event-panel{
+  width:min(86vw, 520px);
+  background:rgba(10,10,14,0.96);
+  border:1px solid rgba(255,255,255,0.14);
+  border-radius:18px;
+  padding:18px 16px 16px;
+  box-shadow:0 20px 70px rgba(0,0,0,0.6);
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.random-event-title{
+  text-align:center;
+  font-size:1.4em;
+  font-weight:800;
+  color:#00ffcc;
+}
+
+.random-event-question{
+  text-align:center;
+  font-size:1.12em;
+  line-height:1.5;
+  color:rgba(255,255,255,0.92);
+}
+
+.random-event-options{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.random-event-option.correct{
+  background:#38a169;
+}
+
+.random-event-option.wrong{
+  background:#e53e3e;
+}
+
+.random-event-result{
+  text-align:center;
+  font-size:1.05em;
+  opacity:0;
+  min-height:1.4em;
+  transition:opacity 0.35s ease;
+}
+.random-event-result.show{ opacity:1; }
+.random-event-result.fade-out{ opacity:0; }
+
 /* ===== 通關彈窗 ===== */
 #pass-overlay{
   position:absolute;
@@ -962,6 +1024,19 @@ h4 {
         <button id="rules-next" class="action-btn">下一頁</button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ===== 隨機事件 Overlay ===== -->
+  <div id="random-event-overlay">
+    <div id="random-event-panel">
+      <div class="random-event-title">隨機事件</div>
+      <div id="random-event-question" class="random-event-question"></div>
+      <div class="random-event-options">
+        <button class="action-btn random-event-option" data-index="0"></button>
+        <button class="action-btn random-event-option" data-index="1"></button>
+      </div>
+      <div id="random-event-result" class="random-event-result"></div>
     </div>
   </div>
 
@@ -2622,6 +2697,7 @@ function startLevel(){
 
   updateHUD();
   updateTopUILayout();
+  triggerRandomEventIfNeeded(info);
 }
 
 /* ===== 通關彈窗 ===== */
@@ -3165,6 +3241,199 @@ rulesNext.addEventListener('click', ()=>{
 window.addEventListener('keydown', (e)=>{
   if(e.key === 'Escape' && isRulesOpen) closeRules();
 });
+
+/* =========================================================
+   隨機事件
+========================================================= */
+const RANDOM_EVENTS = {
+  "金星": {
+    question: "要降落在金星上必須開啟飛船哪種功能?",
+    options: ["防酸", "防鹼"],
+    correctIndex: 0,
+  },
+  "火星": {
+    question: "要登陸在火星上使用飛船哪種裝置比較好?",
+    options: ["空中起重機", "降落傘"],
+    correctIndex: 0,
+  },
+  "艾歐": {
+    question: "你想去火山活動旺盛的地方，應該去?",
+    options: ["艾歐", "歐羅巴"],
+    correctIndex: 0,
+  },
+  "歐羅巴": {
+    question: "你想去充滿冰的地方，應該去?",
+    options: ["艾歐", "歐羅巴"],
+    correctIndex: 1,
+  },
+  "天王星": {
+    question: "大氣中的哪種氣體造成天王星呈現藍綠色?",
+    options: ["硫化氫", "甲烷"],
+    correctIndex: 1,
+  },
+  "海王星": {
+    question: "大氣中的哪種氣體造成海王星呈現藍綠色?",
+    options: ["硫化氫", "甲烷"],
+    correctIndex: 1,
+  },
+  "冥王星": {
+    question: "地球人把冥王星從行星降級成矮行星，為什麼?",
+    options: ["它太小了", "它沒把軌道附近的小天體「清乾淨」"],
+    correctIndex: 1,
+  },
+};
+
+const randomEventOverlay = document.getElementById('random-event-overlay');
+const randomEventQuestion = document.getElementById('random-event-question');
+const randomEventResult = document.getElementById('random-event-result');
+const randomEventOptions = [...document.querySelectorAll('.random-event-option')];
+
+let currentRandomEvent = null;
+let randomEventResolved = false;
+let randomEventTimer = null;
+let randomEventFadeTimer = null;
+
+const randomEventSchedule = {
+  ioEuropaChoice: null,
+  uranusNeptuneChoice: null,
+};
+
+function decideIoEuropaEvent(){
+  if(!randomEventSchedule.ioEuropaChoice){
+    randomEventSchedule.ioEuropaChoice = Math.random() < 0.5 ? "艾歐" : "歐羅巴";
+  }
+}
+
+function decideUranusNeptuneEvent(){
+  if(randomEventSchedule.uranusNeptuneChoice === null){
+    if(Math.random() < 0.5){
+      randomEventSchedule.uranusNeptuneChoice = Math.random() < 0.5 ? "天王星" : "海王星";
+    }else{
+      randomEventSchedule.uranusNeptuneChoice = "none";
+    }
+  }
+}
+
+function shouldTriggerRandomEvent(info){
+  const name = info?.name;
+  if(!name) return false;
+
+  if(["水星","地球","木星","土星"].includes(name)) return false;
+  if(["火星","冥王星"].includes(name)) return true;
+
+  if(name === "金星"){
+    return Math.random() < 0.5;
+  }
+
+  if(["艾歐","歐羅巴"].includes(name)){
+    decideIoEuropaEvent();
+    return randomEventSchedule.ioEuropaChoice === name;
+  }
+
+  if(["天王星","海王星"].includes(name)){
+    decideUranusNeptuneEvent();
+    return randomEventSchedule.uranusNeptuneChoice === name;
+  }
+
+  return false;
+}
+
+function getRandomEventRewardText(){
+  if(hp >= maxHP){
+    return "獲得1棄牌次數";
+  }
+  return "恢復1HP";
+}
+
+function applyRandomEventReward(){
+  if(hp >= maxHP){
+    discardsLeft += 1;
+  }else{
+    healHp(1);
+  }
+  updateHUD();
+}
+
+function openRandomEvent(eventData){
+  if(!eventData || !randomEventOverlay) return;
+
+  currentRandomEvent = eventData;
+  randomEventResolved = false;
+  if(randomEventTimer) window.clearTimeout(randomEventTimer);
+  if(randomEventFadeTimer) window.clearTimeout(randomEventFadeTimer);
+
+  randomEventQuestion.textContent = eventData.question;
+  randomEventResult.textContent = '';
+  randomEventResult.classList.remove('show', 'fade-out');
+
+  randomEventOptions.forEach((btn, idx)=>{
+    btn.textContent = eventData.options[idx] ?? '';
+    btn.disabled = false;
+    btn.classList.remove('correct', 'wrong');
+  });
+
+  randomEventOverlay.classList.add('show');
+  setGamePaused(true);
+  shopBtn.style.pointerEvents = 'none';
+  rulesBtn.style.pointerEvents = 'none';
+}
+
+function closeRandomEvent(){
+  randomEventOverlay.classList.remove('show');
+  randomEventResult.classList.remove('show', 'fade-out');
+  randomEventOptions.forEach(btn=>{
+    btn.disabled = false;
+    btn.classList.remove('correct', 'wrong');
+  });
+
+  shopBtn.style.pointerEvents = 'auto';
+  rulesBtn.style.pointerEvents = 'auto';
+  setGamePaused(isShopOpen || isRulesOpen);
+}
+
+function resolveRandomEventSelection(selectedIndex){
+  if(randomEventResolved || !currentRandomEvent) return;
+  randomEventResolved = true;
+
+  const correctIndex = currentRandomEvent.correctIndex;
+  if(randomEventOptions[correctIndex]){
+    randomEventOptions[correctIndex].classList.add('correct');
+  }
+  if(selectedIndex !== correctIndex && randomEventOptions[selectedIndex]){
+    randomEventOptions[selectedIndex].classList.add('wrong');
+  }
+  randomEventOptions.forEach(btn=>{ btn.disabled = true; });
+
+  if(selectedIndex === correctIndex){
+    applyRandomEventReward();
+    randomEventResult.textContent = `正確，${getRandomEventRewardText()}`;
+  }else{
+    randomEventResult.textContent = "錯誤，沒有獎勵";
+  }
+
+  randomEventResult.classList.add('show');
+  randomEventTimer = window.setTimeout(()=>{
+    randomEventResult.classList.add('fade-out');
+    randomEventFadeTimer = window.setTimeout(()=>{
+      closeRandomEvent();
+    }, 350);
+  }, 1500);
+}
+
+randomEventOptions.forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const idx = Number(btn.dataset.index);
+    if(Number.isNaN(idx)) return;
+    resolveRandomEventSelection(idx);
+  });
+});
+
+function triggerRandomEventIfNeeded(info){
+  if(!info || !RANDOM_EVENTS[info.name]) return;
+  if(shouldTriggerRandomEvent(info)){
+    openRandomEvent(RANDOM_EVENTS[info.name]);
+  }
+}
 
 /* =========================================================
    初始化
