@@ -8,7 +8,7 @@
 <style>
 body{
   margin:0;
-  background:transparent;
+  background:#000;
   font-family:'Noto Sans TC',sans-serif;
   color:#fff;
 }
@@ -2697,7 +2697,6 @@ function startLevel(){
 
   updateHUD();
   updateTopUILayout();
-  triggerRandomEventIfNeeded(info);
 }
 
 /* ===== 通關彈窗 ===== */
@@ -3322,7 +3321,7 @@ function shouldTriggerRandomEvent(info){
   if(["火星","冥王星"].includes(name)) return true;
 
   if(name === "金星"){
-    return Math.random() < 0.5;
+    return Math.random() < 1.5;
   }
 
   if(["艾歐","歐羅巴"].includes(name)){
@@ -3340,9 +3339,9 @@ function shouldTriggerRandomEvent(info){
 
 function getRandomEventRewardText(){
   if(hp >= maxHP){
-    return "獲得1棄牌次數";
+    return "獲得 1 棄牌次數";
   }
-  return "恢復1HP";
+  return "恢復 1 HP";
 }
 
 function applyRandomEventReward(){
@@ -3405,8 +3404,8 @@ function resolveRandomEventSelection(selectedIndex){
   randomEventOptions.forEach(btn=>{ btn.disabled = true; });
 
   if(selectedIndex === correctIndex){
-    applyRandomEventReward();
     randomEventResult.textContent = `正確，${getRandomEventRewardText()}`;
+    applyRandomEventReward();
   }else{
     randomEventResult.textContent = "錯誤，沒有獎勵";
   }
@@ -3604,6 +3603,8 @@ function boot(){
     }
     renderHand();
     updateHUD();
+    const info = LEVELS[levelIndex];
+    triggerRandomEventIfNeeded(info);
   }else{
     // 沒進度 → 當成新遊戲
     applyTestLevelOverride();
